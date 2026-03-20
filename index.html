@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>BOUZU CLIMBER</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Noto+Sans+JP:wght@700;900&display=swap');
+:root { --purple:#8800ff; --pink:#ff00cc; }
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body {
+  width:100%;height:100%;overflow:hidden;overscroll-behavior:none;
+  touch-action:none;background:#08050f;
+  font-family:'Noto Sans JP',sans-serif;user-select:none;
+}
+#root {
+  width:100svw;height:100svh;display:grid;
+  grid-template-rows:auto 1fr auto;
+  background:radial-gradient(ellipse at 40% 30%,#130820 0%,#050508 100%);
+}
+
+/* HEADER */
+#header {
+  display:grid;grid-template-columns:1fr auto;align-items:center;
+  padding:8px 14px 6px;
+  background:linear-gradient(90deg,#0a0015,#160028,#0a0015);
+  border-bottom:2px solid var(--purple);
+  box-shadow:0 3px 20px rgba(136,0,255,.45);
+}
+#title-text {
+  font-family:'Dela Gothic One',cursive;
+  font-size:clamp(1.1em,5vw,1.6em);letter-spacing:.06em;
+  background:linear-gradient(90deg,#ff00cc,#aa00ff,#00aaff);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 10px rgba(170,0,255,.7));line-height:1.1;
+}
+#subtitle {
+  font-size:.52em;letter-spacing:.18em;
+  background:linear-gradient(90deg,#ff88cc,#cc88ff);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;display:block;
+}
+#hud { display:flex;gap:7px;align-items:center; }
+.hud-box {
+  background:rgba(136,0,255,.14);border:1.5px solid #5500aa;
+  border-radius:8px;padding:3px 9px;text-align:center;min-width:46px;
+}
+.hud-label { color:#bb88ff;font-size:.48em;font-weight:700;letter-spacing:.04em;display:block; }
+.hud-val   { color:#fff;font-size:1em;font-weight:900;font-family:'Dela Gothic One',cursive; }
+
+/* MIDDLE */
+#middle { display:grid;grid-template-columns:72px 1fr 90px;overflow:hidden;position:relative; }
+
+/* 待機列 */
+#queue-panel {
+  background:linear-gradient(180deg,#0c0018,#070010);
+  border-right:1.5px solid #2a0044;
+  display:flex;flex-direction:column;align-items:center;
+  padding:8px 2px 4px;overflow:hidden;gap:0px;
+}
+#queue-label { color:#aa66ff;font-size:.5em;font-weight:700;margin-bottom:3px; }
+.queue-person { animation:qIn .3s ease;display:flex;justify-content:center;position:relative; }
+@keyframes qIn { from{transform:translateY(-10px);opacity:0} to{transform:none;opacity:1} }
+
+/* フェイント客のキャップアイコン */
+.decoy-badge {
+  position:absolute;top:2px;right:4px;
+  font-size:.9em;
+  filter:drop-shadow(0 0 3px rgba(255,200,0,.8));
+}
+
+/* ステージ */
+#stage {
+  position:relative;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;overflow:hidden;
+}
+#stage::before {
+  content:'';position:absolute;inset:0;
+  background:
+    repeating-linear-gradient(0deg,transparent,transparent 48px,rgba(136,0,255,.012) 48px,rgba(136,0,255,.012) 49px),
+    repeating-linear-gradient(90deg,transparent,transparent 48px,rgba(136,0,255,.012) 48px,rgba(136,0,255,.012) 49px);
+}
+
+/* キャラ */
+#char-wrap {
+  position:relative;width:min(220px,72vw);aspect-ratio:220/310;z-index:5;flex-shrink:0;
+}
+#character-svg { width:100%;height:100%;display:block; }
+
+/* ===== 吹き出し（リクエスト） ===== */
+#request-bubble {
+  position:absolute;top:-10px;left:50%;transform:translateX(-50%);
+  background:#fff;border:3px solid #ff8800;border-radius:14px;
+  padding:7px 14px;font-size:clamp(.7em,3.5vw,.95em);font-weight:900;
+  color:#333;white-space:nowrap;z-index:30;pointer-events:none;
+  box-shadow:0 4px 16px rgba(255,140,0,.5);
+  display:none;
+}
+#request-bubble::after {
+  content:'';position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);
+  border:7px solid transparent;border-top-color:#ff8800;
+}
+#request-bubble.show { display:block;animation:bubblePop .35s cubic-bezier(.34,1.56,.64,1); }
+@keyframes bubblePop { from{transform:translateX(-50%) scale(.6);opacity:0} to{transform:translateX(-50%) scale(1);opacity:1} }
+
+/* ===== フェイント吹き出し ===== */
+#decoy-bubble {
+  position:absolute;top:-10px;left:50%;transform:translateX(-50%);
+  background:#1a1a2a;border:3px solid #00ccff;border-radius:14px;
+  padding:7px 14px;font-size:clamp(.65em,3.2vw,.9em);font-weight:900;
+  color:#88eeff;white-space:nowrap;z-index:31;pointer-events:none;
+  box-shadow:0 4px 16px rgba(0,200,255,.4);
+  display:none;text-align:center;line-height:1.4;
+}
+#decoy-bubble::after {
+  content:'';position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);
+  border:7px solid transparent;border-top-color:#00ccff;
+}
+#decoy-bubble.show { display:block;animation:bubblePop .35s cubic-bezier(.34,1.56,.64,1); }
+
+/* ===== ドラッグ可能な帽子 ===== */
+#decoy-hat {
+  position:absolute;
+  top:0; left:50%;
+  transform:translateX(-50%) translateY(-20%);
+  font-size:clamp(3em,16vw,5em);
+  z-index:40;              /* タップ受け取るため最前面 */
+  cursor:grab;
+  display:none;
+  line-height:1;
+  filter:drop-shadow(0 4px 14px rgba(0,200,255,.7));
+  touch-action:none;
+  transition:filter .15s;
+}
+#decoy-hat.show    { display:block;animation:hatDrop .45s cubic-bezier(.34,1.56,.64,1); }
+#decoy-hat.grabbed { cursor:grabbing;filter:drop-shadow(0 6px 20px rgba(0,240,255,1)); transform:translateX(-50%) translateY(-20%) scale(1.15); }
+#decoy-hat.success { animation:hatOn .5s ease forwards; }
+@keyframes hatDrop { from{transform:translateX(-50%) translateY(-70%);opacity:0} to{transform:translateX(-50%) translateY(-20%);opacity:1} }
+@keyframes hatOn   { 0%{transform:translateX(-50%) translateY(-20%)} 60%{transform:translateX(-50%) translateY(12%) scale(1.2)} 100%{transform:translateX(-50%) translateY(5%) scale(1);opacity:0} }
+
+/* スワイプヒント矢印アニメ */
+#swipe-hint {
+  position:absolute;top:30%;left:50%;transform:translateX(-50%);
+  pointer-events:none;z-index:35;display:none;
+  font-size:clamp(1.2em,5vw,1.6em);
+  color:#00eeff;text-shadow:0 0 12px #00ccff;
+  font-family:'Dela Gothic One',cursive;
+  white-space:nowrap;
+}
+#swipe-hint.show { display:block;animation:hintPulse 1s ease infinite; }
+@keyframes hintPulse { 0%,100%{opacity:.5;transform:translateX(-50%) translateY(0)} 50%{opacity:1;transform:translateX(-50%) translateY(-6px)} }
+
+/* NG表示 */
+#ng-zones {
+  position:absolute;inset:0;pointer-events:none;z-index:15;
+}
+.ng-overlay {
+  position:absolute;background:rgba(255,0,0,.18);
+  border:2px dashed rgba(255,60,60,.7);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.4em;font-weight:900;color:rgba(255,80,80,.9);
+  text-shadow:0 0 8px rgba(255,0,0,.8);
+  animation:ngPulse 1s ease infinite;
+  pointer-events:none;
+}
+@keyframes ngPulse {
+  0%,100%{border-color:rgba(255,60,60,.7);background:rgba(255,0,0,.18);}
+  50%{border-color:rgba(255,120,120,1);background:rgba(255,0,0,.28);}
+}
+
+/* 怒りエモート */
+#anger-emote {
+  position:absolute;top:-4px;right:-12px;
+  font-size:clamp(1.8em,8vw,2.5em);opacity:0;pointer-events:none;z-index:20;
+}
+#anger-emote.show { animation:angerPop .85s ease forwards; }
+@keyframes angerPop {
+  0%{opacity:0;transform:scale(0) rotate(-20deg)}
+  30%{opacity:1;transform:scale(1.4) rotate(10deg)}
+  70%{opacity:1;transform:scale(1) rotate(0)}
+  100%{opacity:0;transform:scale(.5) translateY(-18px)}
+}
+
+/* 進捗 */
+#prog-area {
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  z-index:10;margin-top:10px;width:88%;
+}
+#prog-label { color:#cc88ff;font-size:.68em;font-weight:700;letter-spacing:.06em; }
+#prog-bg { width:100%;height:16px;background:rgba(0,0,0,.55);border:2px solid #5500aa;border-radius:8px;overflow:hidden; }
+#prog-fill { height:100%;background:linear-gradient(90deg,#7700ee,#ff00cc);border-radius:8px;transition:width .22s ease;box-shadow:0 0 10px rgba(255,0,200,.55); }
+#prog-steps { color:#ff88ff;font-size:.62em;font-weight:700;font-family:'Dela Gothic One',cursive; }
+
+/* タイマーバー */
+#timer-wrap {
+  position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:3px;z-index:10;width:80%;
+}
+#timer-label { color:#553366;font-size:.5em; }
+#timer-bg { width:100%;height:5px;background:rgba(0,0,0,.5);border:1px solid #2a0044;border-radius:3px;overflow:hidden; }
+#timer-fill { height:100%;background:linear-gradient(90deg,#00cc88,#aaff00,#ff4400);border-radius:3px;transition:width .1s linear; }
+
+/* フローティングメッセージ */
+#msg-layer { position:absolute;top:12px;left:0;right:0;pointer-events:none;z-index:60; }
+.fmsg {
+  position:absolute;left:50%;transform:translateX(-50%);
+  font-family:'Dela Gothic One',cursive;font-size:clamp(1.1em,5vw,1.6em);
+  white-space:nowrap;animation:floatUp 1.2s ease forwards;
+  text-shadow:0 0 18px currentColor,2px 2px 0 rgba(0,0,0,.8);
+}
+.fs{color:#ffdd00;}.fa{color:#ff2200;}.fc{color:#00ffaa;}.fd{color:#ff6600;}
+@keyframes floatUp {
+  0%{transform:translateX(-50%) translateY(0);opacity:1}
+  100%{transform:translateX(-50%) translateY(-70px);opacity:0}
+}
+
+/* タワーパネル */
+#tower-panel {
+  background:linear-gradient(180deg,#07000f,#040008);
+  border-left:1.5px solid #2a0044;
+  display:flex;flex-direction:column;align-items:center;
+  padding:8px 5px 6px;overflow:hidden;position:relative;
+}
+#tower-label { font-family:'Dela Gothic One',cursive;font-size:.5em;color:#aa66ff;letter-spacing:.08em;margin-bottom:4px;white-space:nowrap;text-align:center; }
+#tower-wrap { flex:1;width:100%;position:relative;display:flex;align-items:flex-end;justify-content:center;overflow:hidden; }
+#tower-canvas { display:block;border-radius:3px 3px 0 0; }
+#score-box { width:100%;margin-top:5px;background:rgba(136,0,255,.16);border:1.5px solid #5500aa;border-radius:8px;padding:5px 3px;text-align:center; }
+#score-label { color:#bb88ff;font-size:.44em;font-weight:700;letter-spacing:.08em;display:block; }
+#score-val { font-family:'Dela Gothic One',cursive;font-size:clamp(1.2em,5vw,1.8em);color:#fff;display:block;line-height:1.1;text-shadow:0 0 14px #ff00cc,0 0 28px #8800ff; }
+#score-unit { color:#bb88ff;font-size:.42em;font-weight:700; }
+#record-flash { position:absolute;inset:0;pointer-events:none;z-index:30;display:flex;align-items:center;justify-content:center;opacity:0; }
+#record-flash.show { animation:recPop .8s ease forwards; }
+#record-text { font-family:'Dela Gothic One',cursive;font-size:.7em;color:#ffff00;text-shadow:0 0 18px #ffaa00;white-space:nowrap;transform:rotate(-12deg); }
+@keyframes recPop { 0%{opacity:0;transform:scale(.5)} 30%{opacity:1;transform:scale(1.1)} 70%{opacity:1} 100%{opacity:0;transform:scale(.8)} }
+
+/* BOTTOM BAR */
+#bottom-bar { display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:#2a0044;border-top:2px solid var(--purple); }
+.bstat { background:#0a0015;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5px 4px; }
+.bstat-label { color:#884499;font-size:.45em;font-weight:700; }
+.bstat-val   { color:#ffaaff;font-size:.88em;font-weight:900;font-family:'Dela Gothic One',cursive; }
+
+/* エフェクト */
+#anger-flash { position:fixed;inset:0;background:rgba(255,0,0,.4);pointer-events:none;z-index:200;opacity:0;transition:opacity .07s; }
+.hp { position:fixed;pointer-events:none;font-size:.9em;z-index:150;animation:hfly 1s ease forwards; }
+@keyframes hfly {
+  0%{opacity:1;transform:translate(0,0) scale(1) rotate(0)}
+  100%{opacity:0;transform:translate(var(--tx),var(--ty)) scale(.1) rotate(380deg)}
+}
+
+/* OVERLAY */
+#overlay { position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:400;background:rgba(0,0,0,.92);backdrop-filter:blur(8px);padding:20px; }
+#overlay.show { display:flex; }
+#ov-box {
+  background:linear-gradient(135deg,#0d0020,#080015);
+  border:3px solid var(--purple);border-radius:20px;
+  padding:clamp(24px,6vw,44px) clamp(20px,8vw,55px);
+  text-align:center;width:100%;max-width:360px;
+  box-shadow:0 0 70px rgba(136,0,255,.6),inset 0 0 40px rgba(136,0,255,.08);
+  animation:popIn .4s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes popIn { from{transform:scale(.4);opacity:0} to{transform:scale(1);opacity:1} }
+#ov-title { font-family:'Dela Gothic One',cursive;font-size:clamp(2em,9vw,3em);margin-bottom:8px;background:linear-gradient(90deg,#ff0055,#ff00cc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 18px rgba(255,0,100,.8)); }
+#ov-reason { color:#ff88aa;font-size:.9em;margin-bottom:16px;font-weight:700; }
+#ov-score-box { margin:0 0 20px;background:rgba(136,0,255,.15);border:2px solid #5500aa;border-radius:12px;padding:14px 20px; }
+#ov-score-lbl { color:#cc88ff;font-size:.55em;letter-spacing:.14em;font-weight:700;display:block;margin-bottom:2px; }
+#ov-score-val { font-family:'Dela Gothic One',cursive;font-size:clamp(2.5em,12vw,3.5em);color:#fff;display:block;line-height:1;text-shadow:0 0 20px #ff00cc,0 0 40px #8800ff; }
+#ov-score-unit { color:#cc88ff;font-size:.65em;font-weight:700; }
+#ov-sub { color:#7755aa;font-size:.8em;margin-bottom:22px; }
+#restart-btn {
+  background:linear-gradient(135deg,#7700ee,#cc00ff);color:#fff;border:none;border-radius:14px;
+  padding:clamp(12px,4vw,16px) clamp(30px,10vw,52px);font-size:clamp(1em,4.5vw,1.25em);
+  font-family:'Dela Gothic One',cursive;cursor:pointer;letter-spacing:.05em;
+  box-shadow:0 5px 25px rgba(136,0,255,.6);touch-action:manipulation;
+}
+</style>
+</head>
+<body>
+<div id="root">
+
+  <div id="header">
+    <div>
+      <div id="title-text">BOUZU CLIMBER<span id="subtitle">〜坊主への道〜</span></div>
+    </div>
+    <div id="hud">
+      <div class="hud-box"><span class="hud-label">待機</span><span class="hud-val" id="h-queue">0</span></div>
+      <div class="hud-box"><span class="hud-label">完了</span><span class="hud-val" id="h-done">0</span></div>
+      <div class="hud-box"><span class="hud-label">⏱️</span><span class="hud-val" id="h-time">0s</span></div>
+    </div>
+  </div>
+
+  <div id="middle">
+
+    <div id="queue-panel">
+      <div id="queue-label">列</div>
+      <div id="queue-list"></div>
+    </div>
+
+    <div id="stage">
+      <div id="msg-layer"></div>
+
+      <div id="char-wrap">
+        <div id="anger-emote">😤</div>
+
+        <!-- リクエスト吹き出し -->
+        <div id="request-bubble"></div>
+        <!-- フェイント吹き出し -->
+        <div id="decoy-bubble"></div>
+        <!-- フェイント帽子 -->
+        <div id="decoy-hat">🧢</div>
+        <!-- スワイプヒント -->
+        <div id="swipe-hint">⬇️ 頭にかぶせて！</div>
+        <!-- NGゾーン表示レイヤー -->
+        <div id="ng-zones"></div>
+
+        <!-- キャラクターSVG -->
+        <svg id="character-svg" viewBox="0 0 220 310" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="sg" cx="48%" cy="38%" r="62%">
+              <stop offset="0%" stop-color="#f5cc90"/>
+              <stop offset="100%" stop-color="#dfa060"/>
+            </radialGradient>
+            <radialGradient id="hg" cx="50%" cy="18%" r="68%">
+              <stop offset="0%" stop-color="#352210"/>
+              <stop offset="100%" stop-color="#180c04"/>
+            </radialGradient>
+            <radialGradient id="shirt" cx="50%" cy="30%" r="60%">
+              <stop offset="0%" stop-color="#d0d8e8"/>
+              <stop offset="100%" stop-color="#9098a8"/>
+            </radialGradient>
+          </defs>
+          <!-- 体 -->
+          <path d="M72 290 Q66 268 68 248 L80 234 L110 242 L140 234 L152 248 Q154 268 148 290 Q140 308 110 309 Q80 308 72 290Z" fill="url(#shirt)"/>
+          <path d="M94 234 Q110 245 126 234" fill="none" stroke="#808898" stroke-width="1.5"/>
+          <rect x="100" y="216" width="20" height="22" rx="5" fill="url(#sg)"/>
+          <!-- 耳 -->
+          <ellipse id="ear-left"  cx="62"  cy="148" rx="10" ry="13" fill="#dfa060"/>
+          <ellipse cx="62" cy="148" rx="6" ry="8" fill="#cc8848" opacity=".4"/>
+          <ellipse id="ear-right" cx="158" cy="148" rx="10" ry="13" fill="#dfa060"/>
+          <ellipse cx="158" cy="148" rx="6" ry="8" fill="#cc8848" opacity=".4"/>
+          <!-- 顔 -->
+          <ellipse cx="110" cy="148" rx="48" ry="60" fill="url(#sg)"/>
+          <path d="M70 168 Q68 195 84 210 Q97 220 110 221 Q123 220 136 210 Q152 195 150 168" fill="url(#sg)"/>
+          <!-- 髪 layer4 -->
+          <g id="hair-layer-4">
+            <ellipse cx="110" cy="106" rx="50" ry="42" fill="url(#hg)"/>
+            <path d="M64 120 Q70 138 82 135 Q96 133 110 135 Q124 133 138 135 Q150 138 156 120 Q134 94 110 92 Q86 94 64 120Z" fill="#180c04"/>
+            <path d="M63 126 Q52 148 52 172 Q52 192 62 198 Q70 201 74 190 Q66 174 66 152 Q65 136 66 126Z" fill="#180c04"/>
+            <path d="M157 126 Q168 148 168 172 Q168 192 158 198 Q150 201 146 190 Q154 174 154 152 Q155 136 154 126Z" fill="#180c04"/>
+            <path d="M82 118 Q94 132 104 130" fill="none" stroke="#352210" stroke-width="1.5" opacity=".5"/>
+            <path d="M99 114 Q110 130 120 128" fill="none" stroke="#352210" stroke-width="1.5" opacity=".5"/>
+            <path d="M116 114 Q128 130 138 127" fill="none" stroke="#352210" stroke-width="1.5" opacity=".5"/>
+          </g>
+          <g id="hair-layer-3" visibility="hidden">
+            <ellipse cx="110" cy="109" rx="48" ry="35" fill="url(#hg)"/>
+            <path d="M66 118 Q72 132 84 130 Q97 129 110 130 Q123 129 136 130 Q148 132 154 118 Q132 96 110 95 Q88 96 66 118Z" fill="#180c04"/>
+            <path d="M64 128 Q54 148 56 168 Q58 182 66 183 Q72 181 70 165 Q66 148 67 132Z" fill="#180c04"/>
+            <path d="M156 128 Q166 148 164 168 Q162 182 154 183 Q148 181 150 165 Q154 148 153 132Z" fill="#180c04"/>
+          </g>
+          <g id="hair-layer-2" visibility="hidden">
+            <ellipse cx="110" cy="113" rx="47" ry="25" fill="url(#hg)"/>
+            <path d="M67 120 Q74 130 86 129 Q98 129 110 129 Q122 129 134 129 Q146 130 153 120 Q130 102 110 101 Q90 102 67 120Z" fill="#180c04"/>
+            <path d="M65 130 Q57 146 59 160 Q61 170 68 168 Q71 158 69 144Z" fill="#180c04"/>
+            <path d="M155 130 Q163 146 161 160 Q159 170 152 168 Q149 158 151 144Z" fill="#180c04"/>
+          </g>
+          <g id="hair-layer-1" visibility="hidden">
+            <ellipse cx="110" cy="118" rx="46" ry="15" fill="url(#hg)"/>
+            <path d="M67 122 Q60 134 62 146 Q64 154 70 152 Q72 142 70 128Z" fill="#180c04"/>
+            <path d="M153 122 Q160 134 158 146 Q156 154 150 152 Q148 142 150 128Z" fill="#180c04"/>
+          </g>
+          <g id="hair-bald" visibility="hidden">
+            <ellipse cx="110" cy="122" rx="49" ry="20" fill="#180c04" opacity=".16"/>
+          </g>
+          <!-- 眉 -->
+          <path d="M80 128 Q90 122 99 124" fill="none" stroke="#241606" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M121 124 Q130 122 140 128" fill="none" stroke="#241606" stroke-width="2.2" stroke-linecap="round"/>
+          <!-- メガネ -->
+          <circle cx="96"  cy="143" r="16" fill="rgba(210,240,255,.1)" stroke="#c8a030" stroke-width="2.4"/>
+          <circle cx="128" cy="143" r="16" fill="rgba(210,240,255,.1)" stroke="#c8a030" stroke-width="2.4"/>
+          <path d="M112 143 Q112 141 113 143" fill="none" stroke="#c8a030" stroke-width="2"/>
+          <line x1="80" y1="141" x2="62" y2="145" stroke="#c8a030" stroke-width="2" stroke-linecap="round"/>
+          <line x1="144" y1="141" x2="162" y2="145" stroke="#c8a030" stroke-width="2" stroke-linecap="round"/>
+          <!-- 目 -->
+          <ellipse cx="96"  cy="144" rx="10" ry="8.5" fill="white"/>
+          <ellipse cx="128" cy="144" rx="10" ry="8.5" fill="white"/>
+          <circle cx="97"  cy="145" r="6"   fill="#4a3015"/>
+          <circle cx="129" cy="145" r="6"   fill="#4a3015"/>
+          <circle cx="97"  cy="146" r="3.5" fill="#120804" id="pupil-left"/>
+          <circle cx="129" cy="146" r="3.5" fill="#120804" id="pupil-right"/>
+          <circle cx="99"  cy="143" r="1.6" fill="white" opacity=".8"/>
+          <circle cx="131" cy="143" r="1.6" fill="white" opacity=".8"/>
+          <path d="M80 143 Q96 136 112 143" fill="none" stroke="#241606" stroke-width="1" opacity=".45"/>
+          <path d="M112 143 Q128 136 144 143" fill="none" stroke="#241606" stroke-width="1" opacity=".45"/>
+          <path d="M82 150 Q96 154 110 150" fill="none" stroke="#cc8848" stroke-width=".7" opacity=".3"/>
+          <path d="M110 150 Q124 154 142 150" fill="none" stroke="#cc8848" stroke-width=".7" opacity=".3"/>
+          <!-- 鼻 -->
+          <path d="M108 160 Q105 170 107 174 Q110 177 113 174 Q115 170 112 160" fill="#cc8848" opacity=".35"/>
+          <circle cx="106" cy="173" r="3.2" fill="#cc8848" opacity=".28"/>
+          <circle cx="114" cy="173" r="3.2" fill="#cc8848" opacity=".28"/>
+          <!-- 口 -->
+          <path id="mouth" d="M96 192 Q100 190 110 192 Q120 190 124 192" fill="none" stroke="#b06040" stroke-width="2.2" stroke-linecap="round"/>
+          <circle cx="96"  cy="192" r="1.8" fill="#b06040" opacity=".4"/>
+          <circle cx="124" cy="192" r="1.8" fill="#b06040" opacity=".4"/>
+          <!-- 頬・ニキビ -->
+          <circle cx="78"  cy="162" r="10" fill="#ff7766" opacity=".13"/>
+          <circle cx="142" cy="162" r="10" fill="#ff7766" opacity=".13"/>
+          <circle cx="138" cy="170" r="2.2" fill="#cc3030" opacity=".45"/>
+        </svg>
+      </div>
+
+      <!-- 進捗 -->
+      <div id="prog-area">
+        <div id="prog-label">✂️ バリカン進捗</div>
+        <div id="prog-bg"><div id="prog-fill" style="width:0%"></div></div>
+        <div id="prog-steps">0 / 4 回</div>
+      </div>
+
+      <div id="timer-wrap">
+        <div id="timer-label">次の客が来るまで...</div>
+        <div id="timer-bg"><div id="timer-fill" style="width:100%"></div></div>
+      </div>
+    </div>
+
+    <div id="tower-panel">
+      <div id="tower-label">🏔️ HAIR<br>TOWER</div>
+      <div id="tower-wrap">
+        <canvas id="tower-canvas"></canvas>
+        <div id="record-flash"><div id="record-text">🏆NEW!</div></div>
+      </div>
+      <div id="score-box">
+        <span id="score-label">📏 高さ</span>
+        <span id="score-val">0</span>
+        <span id="score-unit">cm</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="bottom-bar">
+    <div class="bstat"><span class="bstat-label">✂️ 刈り回数</span><span class="bstat-val" id="b-cuts">0</span></div>
+    <div class="bstat"><span class="bstat-label">😡 怒られ</span><span class="bstat-val" id="b-anger">0</span></div>
+    <div class="bstat"><span class="bstat-label">🏆 ベスト</span><span class="bstat-val" id="b-best">0cm</span></div>
+  </div>
+
+</div>
+
+<div id="anger-flash"></div>
+
+<div id="overlay">
+  <div id="ov-box">
+    <div id="ov-title">GAME OVER</div>
+    <div id="ov-reason"></div>
+    <div id="ov-score-box">
+      <span id="ov-score-lbl">FINAL HAIR TOWER HEIGHT</span>
+      <span id="ov-score-val">0</span>
+      <span id="ov-score-unit">cm</span>
+    </div>
+    <div id="ov-sub"></div>
+    <button id="restart-btn" onclick="startGame()">🔄 もう一度登る</button>
+  </div>
+</div>
+
+<script>
+// ================================================================
+//  BOUZU CLIMBER v4
+//  A: リクエスト客 — 左右どちらかの髪 or 前髪にNGゾーン
+//  D: フェイント客 — 帽子あり、タップした瞬間「やめます！」即死
+// ================================================================
+
+const REQUESTS = [
+  { label:'「左は残して」',  ngZones:['left']  },
+  { label:'「右は残して」',  ngZones:['right'] },
+  { label:'「前髪だけ残して」', ngZones:['front'] },
+  { label:'「耳周りNG」',    ngZones:['ears']  },
+];
+
+// NGゾーンのSVG座標領域 (viewBox 220×310)
+const NG_DEFS = {
+  left:  { cx:75,  cy:112, rx:38, ry:34, label:'左' },
+  right: { cx:145, cy:112, rx:38, ry:34, label:'右' },
+  front: { cx:110, cy:126, rx:46, ry:16, label:'前' },
+  ears:  null, // 耳ゾーンは両耳で別判定
+};
+
+let bestHeight = 0;
+let segments   = [];
+
+// 客の種類
+// type: 'normal' | 'request' | 'decoy'
+function makeState(){
+  return {
+    running:false, cutCount:0, queueCount:0,
+    completedCount:0, angerCount:0, cutTotal:0,
+    elapsedSec:0, nextTimer:0,
+    baseInterval:4000,
+    isAngry:false, hairHeight:0,
+    // 現在の客
+    clientType:'normal',  // 'normal'|'request'|'decoy'
+    request:null,         // リクエスト客の場合: REQUESTS要素
+    decoyTriggered:false,
+  };
+}
+let G = makeState();
+
+// DOM
+const svgEl         = document.getElementById('character-svg');
+const queueList     = document.getElementById('queue-list');
+const progFill      = document.getElementById('prog-fill');
+const progSteps     = document.getElementById('prog-steps');
+const timerFill     = document.getElementById('timer-fill');
+const overlayEl     = document.getElementById('overlay');
+const angerFlash    = document.getElementById('anger-flash');
+const angerEmote    = document.getElementById('anger-emote');
+const mouth         = document.getElementById('mouth');
+const canvas        = document.getElementById('tower-canvas');
+const ctx           = canvas.getContext('2d');
+const scoreVal      = document.getElementById('score-val');
+const recFlash      = document.getElementById('record-flash');
+const reqBubble     = document.getElementById('request-bubble');
+const decoyBubble   = document.getElementById('decoy-bubble');
+const decoyHat      = document.getElementById('decoy-hat');
+const ngZonesEl     = document.getElementById('ng-zones');
+
+// ================================================================
+//  スワイプ状態（帽子ドラッグ用）
+// ================================================================
+let swipe = { active:false, startX:0, startY:0 };
+
+// ================================================================
+//  タッチ / マウス
+// ================================================================
+function getPoint(e){
+  if(e.changedTouches?.length) return { x:e.changedTouches[0].clientX, y:e.changedTouches[0].clientY };
+  return { x:e.clientX, y:e.clientY };
+}
+
+// ---- 帽子スワイプ ----
+const hatEl     = document.getElementById('decoy-hat');
+const swipeHint = document.getElementById('swipe-hint');
+
+function onHatStart(e){
+  if(!G.running || G.clientType !== 'decoy' || G.decoyTriggered) return;
+  e.stopPropagation(); e.preventDefault();
+  const pt = getPoint(e);
+  swipe = { active:true, startX:pt.x, startY:pt.y };
+  hatEl.classList.add('grabbed');
+}
+function onHatMove(e){ if(swipe.active) e.preventDefault(); }
+function onHatEnd(e){
+  if(!swipe.active) return;
+  swipe.active = false;
+  hatEl.classList.remove('grabbed');
+  if(!G.running || G.clientType !== 'decoy' || G.decoyTriggered) return;
+  const pt   = getPoint(e);
+  const dy   = pt.y - swipe.startY;
+  const dx   = pt.x - swipe.startX;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  // 30px以上 & 下方向スワイプ → 成功
+  if(dist >= 30 && dy > Math.abs(dx) * 0.5) successDecoy();
+}
+
+hatEl.addEventListener('touchstart', onHatStart, { passive:false });
+hatEl.addEventListener('touchmove',  onHatMove,  { passive:false });
+hatEl.addEventListener('touchend',   onHatEnd,   { passive:false });
+hatEl.addEventListener('mousedown',  onHatStart);
+window.addEventListener('mousemove', e=>{ if(swipe.active) e.preventDefault(); });
+window.addEventListener('mouseup',   onHatEnd);
+
+// ---- 帽子スワイプ成功 ----
+function successDecoy(){
+  G.decoyTriggered = true;
+  G.running = false;
+  hatEl.classList.remove('show','grabbed');
+  hatEl.classList.add('success');
+  hatEl.style.display = 'block';
+  swipeHint.classList.remove('show');
+  decoyBubble.innerHTML = '「ありがとうございます！」';
+  decoyBubble.classList.remove('show'); void decoyBubble.offsetWidth; decoyBubble.classList.add('show');
+  mouth.setAttribute('d','M96 192 Q110 202 124 192');
+  showMsg('🧢 うまくかぶせた！','fc');
+  setTimeout(()=>{
+    hatEl.classList.remove('success'); hatEl.style.display='';
+    nextCustomer();
+  }, 900);
+}
+
+// ---- キャラへのタップ ----
+function handleTap(e){
+  if(!G.running || G.isAngry) return;
+  e.preventDefault();
+  const pt = getPoint(e);
+  const r  = svgEl.getBoundingClientRect();
+  const sx = (pt.x - r.left) * (220 / r.width);
+  const sy = (pt.y - r.top)  * (310 / r.height);
+  const zone = getZone(sx, sy);
+
+  // フェイント客：帽子スワイプせずに髪・顔・耳をタップ → ゲームオーバー
+  if(G.clientType === 'decoy'){
+    if(zone === 'hair' || zone === 'face' || zone === 'ear'){
+      triggerDecoyGameOver();
+    }
+    return;
+  }
+
+  // 通常・リクエスト客
+  if(zone === 'hair'){
+    if(G.clientType === 'request' && G.request){
+      const violated = checkNGViolation(sx, sy);
+      if(violated){ doAngryRequest(violated); return; }
+    }
+    G.cutCount++; G.cutTotal++;
+    const added = 2 + Math.floor(Math.random() * 4);
+    addHair(added, pt.x, pt.y);
+    updateHair(); updateProg();
+    showMsg(`✂️ +${added}cm`, 'fs');
+    document.getElementById('b-cuts').textContent = G.cutTotal;
+    if(G.cutCount >= 4) completeCut();
+  } else if(zone === 'face' || zone === 'ear'){
+    doAngry(zone);
+  }
+}
+
+svgEl.addEventListener('touchstart', handleTap, { passive:false });
+svgEl.addEventListener('mousedown',  handleTap);
+
+// ================================================================
+//  ヒットゾーン (viewBox 220×310)
+// ================================================================
+function inE(px,py,cx,cy,rx,ry){ return ((px-cx)**2/rx**2+(py-cy)**2/ry**2)<=1; }
+
+function getZone(x,y){
+  if(inE(x,y, 62,148,11,14)) return 'ear';
+  if(inE(x,y,158,148,11,14)) return 'ear';
+  if(y < 138 && inE(x,y,110,104,44,40)) return 'hair';
+  if(inE(x,y,110,158,50,72)) return 'face';
+  return 'none';
+}
+
+// NGゾーン判定
+function checkNGViolation(sx, sy){
+  if(!G.request) return null;
+  for(const zone of G.request.ngZones){
+    if(zone === 'ears'){
+      if(inE(sx,sy,62,148,14,18) || inE(sx,sy,158,148,14,18)) return 'ears';
+    } else {
+      const def = NG_DEFS[zone];
+      if(def && inE(sx,sy,def.cx,def.cy,def.rx,def.ry)) return zone;
+    }
+  }
+  return null;
+}
+
+// ================================================================
+//  NGゾーンのCSSオーバーレイを描画
+// ================================================================
+function renderNGOverlay(){
+  ngZonesEl.innerHTML = '';
+  if(G.clientType !== 'request' || !G.request) return;
+
+  const svgRect = svgEl.getBoundingClientRect();
+  const scaleX  = svgRect.width  / 220;
+  const scaleY  = svgRect.height / 310;
+
+  for(const zone of G.request.ngZones){
+    let defs = [];
+    if(zone === 'ears'){
+      defs = [
+        { cx:62, cy:148, rx:14, ry:18 },
+        { cx:158, cy:148, rx:14, ry:18 },
+      ];
+    } else if(NG_DEFS[zone]){
+      defs = [NG_DEFS[zone]];
+    }
+    for(const d of defs){
+      const el = document.createElement('div');
+      el.className = 'ng-overlay';
+      const px  = (d.cx - d.rx) * scaleX;
+      const py  = (d.cy - d.ry) * scaleY;
+      const pw  = d.rx * 2 * scaleX;
+      const ph  = d.ry * 2 * scaleY;
+      el.style.left   = px + 'px';
+      el.style.top    = py + 'px';
+      el.style.width  = pw + 'px';
+      el.style.height = ph + 'px';
+      el.textContent  = '🚫';
+      ngZonesEl.appendChild(el);
+    }
+  }
+}
+
+// ================================================================
+//  客タイプの決定
+// ================================================================
+function pickClientType(elapsed){
+  if(elapsed < 30) return 'normal';
+  const r = Math.random();
+  if(r < 0.20) return 'decoy';
+  if(r < 0.55) return 'request';
+  return 'normal';
+}
+
+function setupClient(){
+  // キューの先頭タイプを使う（なければ新規決定）
+  const type = queueTypes.length > 0 ? queueTypes[0] : pickClientType(G.elapsedSec);
+  G.clientType     = type;
+  G.request        = null;
+  G.decoyTriggered = false;
+
+  // UI リセット
+  reqBubble.classList.remove('show');
+  decoyBubble.classList.remove('show');
+  decoyHat.classList.remove('show');
+  decoyHat.style.display='';
+  swipeHint.classList.remove('show');
+  ngZonesEl.innerHTML='';
+
+  if(type === 'request'){
+    G.request = REQUESTS[Math.floor(Math.random() * REQUESTS.length)];
+    reqBubble.textContent = G.request.label;
+    reqBubble.classList.add('show');
+    setTimeout(renderNGOverlay, 50);
+  } else if(type === 'decoy'){
+    decoyHat.classList.add('show');
+    decoyBubble.innerHTML = '「やっぱり…どうしようかな」<br><small style="font-size:.8em;color:#aaffff;">🧢 帽子を下にスワイプ！</small>';
+    decoyBubble.classList.add('show');
+    swipeHint.classList.add('show');
+  }
+}
+
+// ================================================================
+//  フェイント客 — タップでゲームオーバー
+// ================================================================
+function triggerDecoyGameOver(){
+  if(G.decoyTriggered) return;
+  G.decoyTriggered = true;
+  G.running = false;
+  G.angerCount++;
+  document.getElementById('b-anger').textContent = G.angerCount;
+
+  decoyBubble.innerHTML = '「やっぱやめます！！」';
+  decoyBubble.classList.remove('show'); void decoyBubble.offsetWidth; decoyBubble.classList.add('show');
+  mouth.setAttribute('d','M98 196 Q110 188 122 196');
+  document.getElementById('pupil-left').setAttribute('fill','#cc0000');
+  document.getElementById('pupil-right').setAttribute('fill','#cc0000');
+  angerFlash.style.opacity='1'; setTimeout(()=>{ angerFlash.style.opacity='0'; }, 200);
+  angerEmote.textContent='🫵';
+  angerEmote.classList.remove('show'); void angerEmote.offsetWidth; angerEmote.classList.add('show');
+  showMsg('🧢 刈ろうとした！', 'fd');
+  setTimeout(()=> gameOver('フェイント客を刈ろうとした！'), 900);
+}
+function doAngryRequest(zone){
+  const zoneNames = { left:'左の髪', right:'右の髪', front:'前髪', ears:'耳周り' };
+  const label = `${zoneNames[zone] || 'NGゾーン'}を刈った！`;
+  reqBubble.textContent = '「そこじゃない！！」';
+  reqBubble.classList.remove('show'); void reqBubble.offsetWidth; reqBubble.classList.add('show');
+  doAngryBase(label);
+}
+
+function doAngry(zone){
+  const label = zone==='ear' ? '耳を刈った！' : '顔を刈った！';
+  doAngryBase(label);
+}
+
+function doAngryBase(label){
+  if(G.isAngry) return;
+  G.isAngry=true; G.angerCount++;
+  document.getElementById('b-anger').textContent=G.angerCount;
+  mouth.setAttribute('d','M98 196 Q110 188 122 196');
+  document.getElementById('pupil-left').setAttribute('fill','#cc0000');
+  document.getElementById('pupil-right').setAttribute('fill','#cc0000');
+  angerFlash.style.opacity='1'; setTimeout(()=>{angerFlash.style.opacity='0';},180);
+  angerEmote.textContent='😤';
+  angerEmote.classList.remove('show'); void angerEmote.offsetWidth; angerEmote.classList.add('show');
+  showMsg(`😡 ${label}`,'fa');
+  setTimeout(()=>gameOver(label),900);
+}
+
+// ================================================================
+//  髪タワー
+// ================================================================
+function addHair(cm, fromX, fromY){
+  G.hairHeight += cm;
+  segments.push({ h:cm, hue:18+Math.floor(Math.random()*12), wobble:(Math.random()-.5)*5, curl:Math.random()>.5 });
+  scoreVal.textContent = G.hairHeight;
+  document.getElementById('ov-score-val').textContent = G.hairHeight;
+  if(G.hairHeight > bestHeight){
+    bestHeight = G.hairHeight;
+    document.getElementById('b-best').textContent = bestHeight+'cm';
+    recFlash.classList.remove('show'); void recFlash.offsetWidth; recFlash.classList.add('show');
+  }
+  spawnParticles(fromX, fromY);
+  drawTower();
+}
+
+function drawTower(){
+  const wrap=document.getElementById('tower-wrap');
+  const wrapW=wrap.clientWidth||80, wrapH=wrap.clientHeight||300;
+  canvas.width=wrapW; canvas.height=wrapH; ctx.clearRect(0,0,wrapW,wrapH);
+  if(!segments.length){ drawFloor(wrapW,wrapH); return; }
+  const pxPerCm=Math.min(wrapH*.9/G.hairHeight,10); let curY=wrapH-3;
+  segments.forEach((seg,i)=>{
+    const sH=Math.max(3,seg.h*pxPerCm);
+    const sW=Math.min(wrapW-8,60+Math.sin(i*.9)*10+seg.wobble*2);
+    const x=(wrapW-sW)/2+seg.wobble*.5, y=curY-sH;
+    const grad=ctx.createLinearGradient(x,y,x+sW,y+sH);
+    grad.addColorStop(0,`hsl(${seg.hue},58%,24%)`);
+    grad.addColorStop(.4,`hsl(${seg.hue},54%,32%)`);
+    grad.addColorStop(1,`hsl(${seg.hue},48%,14%)`);
+    ctx.save(); ctx.beginPath(); ctx.moveTo(x+5,y+sH); ctx.lineTo(x,y+sH);
+    if(seg.curl){
+      ctx.bezierCurveTo(x-4,y+sH*.5,x+3,y+sH*.2,x+sW*.2,y+1);
+      ctx.bezierCurveTo(x+sW*.4,y-3,x+sW*.6,y-3,x+sW*.8,y+1);
+      ctx.bezierCurveTo(x+sW-3,y+sH*.2,x+sW+4,y+sH*.5,x+sW,y+sH);
+    } else {
+      ctx.bezierCurveTo(x-5,y+sH*.6,x-1,y+3,x+sW*.25,y);
+      ctx.bezierCurveTo(x+sW*.5,y-4,x+sW*.75,y,x+sW+1,y+3);
+      ctx.bezierCurveTo(x+sW+5,y+sH*.6,x+sW,y+sH,x+sW,y+sH);
+    }
+    ctx.closePath(); ctx.fillStyle=grad; ctx.fill();
+    ctx.strokeStyle=`hsl(${seg.hue},38%,42%)`; ctx.lineWidth=.6; ctx.globalAlpha=.45;
+    for(let j=0;j<3;j++){
+      const lx=x+6+j*(sW-12)/2; ctx.beginPath(); ctx.moveTo(lx,y+sH-2);
+      ctx.quadraticCurveTo(lx+(Math.random()-.5)*6,y+sH/2,lx+(Math.random()-.5)*4,y+2); ctx.stroke();
+    }
+    ctx.globalAlpha=1; ctx.restore(); curY=y;
+  });
+  const grd=ctx.createRadialGradient(wrapW/2,curY,0,wrapW/2,curY,30);
+  grd.addColorStop(0,'rgba(255,200,80,.22)'); grd.addColorStop(1,'rgba(255,200,80,0)');
+  ctx.fillStyle=grd; ctx.fillRect(0,curY-30,wrapW,60);
+  drawFloor(wrapW,wrapH);
+}
+function drawFloor(w,h){ ctx.strokeStyle='#2a0044'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(0,h-2); ctx.lineTo(w,h-2); ctx.stroke(); }
+
+function spawnParticles(fromX,fromY){
+  const tr=canvas.getBoundingClientRect(); const toX=tr.left+tr.width/2,toY=tr.top+tr.height*.3;
+  for(let i=0;i<5;i++){
+    const p=document.createElement('div'); p.className='hp';
+    p.textContent=['〜','∿','ー','〰'][Math.floor(Math.random()*4)];
+    p.style.color=`hsl(${18+Math.random()*14},58%,38%)`;
+    p.style.left=(fromX+(Math.random()-.5)*28)+'px'; p.style.top=(fromY+(Math.random()-.5)*18)+'px';
+    p.style.animationDelay=(Math.random()*.22)+'s';
+    p.style.setProperty('--tx',(toX-fromX+(Math.random()-.5)*40)+'px');
+    p.style.setProperty('--ty',(toY-fromY+(Math.random()-.5)*30)+'px');
+    document.body.appendChild(p); setTimeout(()=>p.remove(),1100);
+  }
+}
+
+// ================================================================
+//  ゲームロジック
+// ================================================================
+function updateHair(){
+  for(let i=1;i<=4;i++) document.getElementById(`hair-layer-${i}`).setAttribute('visibility','hidden');
+  document.getElementById('hair-bald').setAttribute('visibility','hidden');
+  const rem=4-G.cutCount;
+  if(rem>=1&&rem<=4) document.getElementById(`hair-layer-${rem}`).setAttribute('visibility','visible');
+  else document.getElementById('hair-bald').setAttribute('visibility','visible');
+}
+function updateProg(){
+  progFill.style.width=Math.min(100,(G.cutCount/4)*100)+'%';
+  progSteps.textContent=`${Math.min(4,G.cutCount)} / 4 回`;
+}
+
+function completeCut(){
+  G.running=false; G.completedCount++;
+  mouth.setAttribute('d','M96 192 Q110 202 124 192');
+  const isRequest = G.clientType === 'request';
+  showMsg(isRequest ? '⭐ リクエスト達成！' : '🎉 坊主完成！', isRequest ? 'fs' : 'fc');
+  document.getElementById('h-done').textContent=G.completedCount;
+  setTimeout(nextCustomer,1200);
+}
+
+function nextCustomer(){
+  if(G.queueCount>0){
+    G.queueCount--;
+    queueTypes.shift();
+    renderQueue();
+  }
+  G.cutCount=0; G.isAngry=false; G.decoyTriggered=false;
+  swipe.active=false;
+  resetFace();
+  setupClient();
+  G.running=true;
+}
+
+function resetFace(){
+  for(let i=1;i<=4;i++) document.getElementById(`hair-layer-${i}`).setAttribute('visibility','hidden');
+  document.getElementById('hair-layer-4').setAttribute('visibility','visible');
+  document.getElementById('hair-bald').setAttribute('visibility','hidden');
+  mouth.setAttribute('d','M96 192 Q100 190 110 192 Q120 190 124 192');
+  document.getElementById('pupil-left').setAttribute('fill','#120804');
+  document.getElementById('pupil-right').setAttribute('fill','#120804');
+  angerEmote.textContent='😤';
+  progFill.style.width='0%'; progSteps.textContent='0 / 4 回';
+}
+
+// ================================================================
+//  待機列
+// ================================================================
+function miniSVG(type){
+  const shirtColor = type === 'request' ? '#aad0ff' : '#9098a8';
+  const hairParts  = type !== 'decoy' ? `
+    <ellipse cx="110" cy="106" rx="50" ry="42" fill="#180c04"/>
+    <path d="M64 120 Q70 138 82 135 Q96 133 110 135 Q124 133 138 135 Q150 138 156 120 Q134 94 110 92 Q86 94 64 120Z" fill="#180c04"/>
+    <path d="M63 126 Q52 148 52 172 Q52 192 62 198 Q70 201 74 190 Q66 174 66 152 Q65 136 66 126Z" fill="#180c04"/>
+    <path d="M157 126 Q168 148 168 172 Q168 192 158 198 Q150 201 146 190 Q154 174 154 152 Q155 136 154 126Z" fill="#180c04"/>
+  ` : '';
+
+  const svgStr = `<svg width="58" height="52" viewBox="0 0 220 310" xmlns="http://www.w3.org/2000/svg">
+    <path d="M72 290 Q66 268 68 248 L80 234 L110 242 L140 234 L152 248 Q154 268 148 290 Q140 308 110 309 Q80 308 72 290Z" fill="${shirtColor}"/>
+    <rect x="100" y="216" width="20" height="22" rx="5" fill="#f5cc90"/>
+    <ellipse cx="62" cy="148" rx="10" ry="13" fill="#dfa060"/>
+    <ellipse cx="158" cy="148" rx="10" ry="13" fill="#dfa060"/>
+    <ellipse cx="110" cy="148" rx="48" ry="60" fill="#f5cc90"/>
+    <path d="M70 168 Q68 195 84 210 Q97 220 110 221 Q123 220 136 210 Q152 195 150 168" fill="#f5cc90"/>
+    ${hairParts}
+    <circle cx="96" cy="143" r="14" fill="rgba(210,240,255,.1)" stroke="#c8a030" stroke-width="2"/>
+    <circle cx="128" cy="143" r="14" fill="rgba(210,240,255,.1)" stroke="#c8a030" stroke-width="2"/>
+    <line x1="82" y1="141" x2="62" y2="145" stroke="#c8a030" stroke-width="2"/>
+    <line x1="142" y1="141" x2="162" y2="145" stroke="#c8a030" stroke-width="2"/>
+    <circle cx="96" cy="144" r="8" fill="white"/>
+    <circle cx="128" cy="144" r="8" fill="white"/>
+    <circle cx="97" cy="145" r="4.5" fill="#120804"/>
+    <circle cx="129" cy="145" r="4.5" fill="#120804"/>
+    <path d="M96 192 Q100 190 110 192 Q120 190 124 192" fill="none" stroke="#b06040" stroke-width="2" stroke-linecap="round"/>
+  </svg>`;
+
+  // バッジをCSSで重ねる（絵文字のSVG内描画はブラウザ依存で不安定なため）
+  const badge = type === 'decoy'
+    ? `<span style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:1.5em;line-height:1;pointer-events:none;z-index:5;">🧢</span>`
+    : type === 'request'
+    ? `<span style="position:absolute;bottom:0;right:2px;font-size:.9em;line-height:1;pointer-events:none;z-index:5;">💬</span>`
+    : '';
+
+  return `<div style="position:relative;display:inline-block;">${svgStr}${badge}</div>`;
+}
+
+// キューに並んでいる客のタイプリスト
+let queueTypes = [];
+
+function renderQueue(){
+  queueList.innerHTML='';
+  for(let i=0;i<G.queueCount;i++){
+    const type = queueTypes[i] || 'normal';
+    const d=document.createElement('div'); d.className='queue-person';
+    d.innerHTML=miniSVG(type);
+    queueList.appendChild(d);
+  }
+  document.getElementById('h-queue').textContent=G.queueCount;
+}
+
+function addToQueue(){
+  // キューに入る客のタイプを事前決定（30秒以降はランダム）
+  let type = 'normal';
+  if(G.elapsedSec >= 30){
+    const r=Math.random();
+    if(r<0.18) type='decoy';
+    else if(r<0.50) type='request';
+  }
+  queueTypes.push(type);
+  G.queueCount++; renderQueue();
+  if(G.queueCount>=10) gameOver('待機列が10人に達した！');
+}
+
+function showMsg(text, cls){
+  const c  = document.getElementById('msg-layer');
+  const el = document.createElement('div');
+  el.className = `fmsg ${cls}`;
+  el.textContent = text;
+  el.style.top = '8px';
+  c.appendChild(el);
+  setTimeout(()=> el.remove(), 1300);
+}
+
+function gameOver(reason){
+  G.running=false;
+  reqBubble.classList.remove('show');
+  decoyBubble.classList.remove('show');
+  decoyHat.classList.remove('show');
+  swipeHint.classList.remove('show');
+  ngZonesEl.innerHTML='';
+  document.getElementById('ov-reason').textContent='⚠️ '+reason;
+  document.getElementById('ov-score-val').textContent=G.hairHeight;
+  document.getElementById('ov-sub').textContent=`坊主: ${G.completedCount}人 ／ 怒られ: ${G.angerCount}回`;
+  overlayEl.classList.add('show');
+}
+
+// ================================================================
+//  ゲームループ
+// ================================================================
+let rafId, lastMs;
+function tick(now){
+  const dt=now-lastMs; lastMs=now;
+  if(G.running){
+    G.elapsedSec+=dt/1000;
+    document.getElementById('h-time').textContent=Math.floor(G.elapsedSec)+'s';
+    G.nextTimer+=dt;
+    // 10秒ごとに1倍ずつ増加（最大5倍）
+    const speed    = Math.min(5, 1 + G.elapsedSec / 10);
+    const interval = G.baseInterval / speed;
+    timerFill.style.width=Math.max(0,(1-G.nextTimer/interval)*100)+'%';
+    if(G.nextTimer>=interval){ G.nextTimer=0; addToQueue(); }
+  }
+  rafId=requestAnimationFrame(tick);
+}
+
+function startGame(){
+  G=makeState(); G.running=true; segments=[]; queueTypes=[];
+  overlayEl.classList.remove('show');
+  queueList.innerHTML='';
+  resetFace();
+  reqBubble.classList.remove('show');
+  decoyBubble.classList.remove('show');
+  decoyHat.classList.remove('show');
+  ngZonesEl.innerHTML='';
+  ['h-queue','h-done'].forEach(id=>document.getElementById(id).textContent='0');
+  document.getElementById('h-time').textContent='0s';
+  document.getElementById('b-cuts').textContent='0';
+  document.getElementById('b-anger').textContent='0';
+  document.getElementById('b-best').textContent=bestHeight?bestHeight+'cm':'0cm';
+  scoreVal.textContent='0';
+  timerFill.style.width='100%';
+  // 最初の客はノーマル確定
+  G.clientType='normal';
+  G.request=null;
+  G.decoyTriggered=false;
+
+  const wrap=document.getElementById('tower-wrap');
+  canvas.width=wrap.clientWidth||80; canvas.height=wrap.clientHeight||300;
+  ctx.clearRect(0,0,canvas.width,canvas.height); drawFloor(canvas.width,canvas.height);
+
+  cancelAnimationFrame(rafId); lastMs=performance.now(); tick(lastMs);
+}
+
+window.addEventListener('resize',()=>{ if(segments.length) drawTower(); renderNGOverlay(); });
+document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+document.addEventListener('contextmenu',e=>e.preventDefault());
+
+startGame();
+</script>
+</body>
+</html>
