@@ -332,6 +332,16 @@ html,body {
   font-family:'Dela Gothic One',cursive;cursor:pointer;letter-spacing:.05em;
   box-shadow:0 5px 25px rgba(136,0,255,.6);touch-action:manipulation;
 }
+#ov-buttons { display:flex;flex-direction:column;align-items:center;gap:12px; }
+#share-btn {
+  background:#000;color:#fff;border:2px solid #333;border-radius:14px;
+  padding:clamp(10px,3.5vw,14px) clamp(24px,8vw,44px);font-size:clamp(.9em,4vw,1.1em);
+  font-family:'Dela Gothic One',cursive;cursor:pointer;letter-spacing:.05em;
+  display:flex;align-items:center;gap:8px;touch-action:manipulation;
+  transition:background .15s,border-color .15s;
+}
+#share-btn:hover { background:#111;border-color:#555; }
+#share-btn svg { flex-shrink:0; }
 
 /* TUTORIAL */
 #tutorial {
@@ -639,7 +649,15 @@ html,body {
       <span id="ov-rank-name"></span>
     </div>
     <div id="ov-sub"></div>
-    <button id="restart-btn" onclick="startGame()">🔄 もう一度登る</button>
+    <div id="ov-buttons">
+      <button id="share-btn" onclick="shareResult()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.734-8.835L1.254 2.25H8.08l4.253 5.622 5.91-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+        </svg>
+        Xでシェア
+      </button>
+      <button id="restart-btn" onclick="startGame()">🔄 もう一度登る</button>
+    </div>
   </div>
 </div>
 
@@ -1330,6 +1348,16 @@ function tutNext(){
   document.querySelectorAll('.tut-dot').forEach((d,i)=>d.classList.toggle('active',i===tutPage));
   const btn = document.getElementById('tut-btn');
   btn.textContent = tutPage === TUT_TOTAL-1 ? 'ゲームスタート！' : '次へ →';
+}
+
+function shareResult(){
+  const rank = getRank(G.hairHeight);
+  const text = `✂️ BOUZU CLIMBER\n${rank.icon} ${rank.name} 達成！\nヘアタワー ${G.hairHeight}cm / 坊主 ${G.completedCount}人\n#BOUZUCLIMBER`;
+  const url  = 'https://ryotakahashi.github.io/bouzu-climber/';
+  window.open(
+    `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
+    '_blank', 'noopener,noreferrer'
+  );
 }
 
 function showTutorial(){
