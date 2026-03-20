@@ -1250,10 +1250,14 @@ function tick(now){
     G.elapsedSec+=dt/1000;
     document.getElementById('h-time').textContent=Math.floor(G.elapsedSec)+'s';
     G.nextTimer+=dt;
-    // 0〜10秒: 1倍→2倍に線形加速、10秒以降: 10秒ごとに0.3倍加算
+    // 0〜10秒: 1倍→1.5倍に線形加速
+    // 10〜20秒: 1.5倍固定
+    // 20秒以降: 1.8倍 + 10秒ごとに0.1倍加算
     const speed = G.elapsedSec < 10
-      ? 1 + G.elapsedSec / 10
-      : 2 + 0.3 * Math.floor((G.elapsedSec - 10) / 10);
+      ? 1 + G.elapsedSec / 10 * 0.5
+      : G.elapsedSec < 20
+        ? 1.5
+        : 1.8 + 0.1 * Math.floor((G.elapsedSec - 20) / 10);
     const interval = G.baseInterval / speed;
     timerFill.style.width=Math.max(0,(1-G.nextTimer/interval)*100)+'%';
     if(G.nextTimer>=interval){ G.nextTimer=0; addToQueue(); }
