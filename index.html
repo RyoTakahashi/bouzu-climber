@@ -272,6 +272,68 @@ html,body {
   font-family:'Dela Gothic One',cursive;cursor:pointer;letter-spacing:.05em;
   box-shadow:0 5px 25px rgba(136,0,255,.6);touch-action:manipulation;
 }
+
+/* TUTORIAL */
+#tutorial {
+  position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
+  z-index:500;background:rgba(0,0,0,.95);backdrop-filter:blur(10px);padding:20px;
+}
+#tutorial.show { display:flex; }
+#tut-box {
+  background:linear-gradient(135deg,#0d0020,#080015);
+  border:3px solid var(--purple);border-radius:20px;
+  padding:clamp(20px,5vw,36px) clamp(18px,7vw,48px);
+  text-align:center;width:100%;max-width:360px;
+  box-shadow:0 0 70px rgba(136,0,255,.6),inset 0 0 40px rgba(136,0,255,.08);
+  animation:popIn .4s cubic-bezier(.34,1.56,.64,1);
+}
+#tut-heading {
+  font-family:'Dela Gothic One',cursive;font-size:clamp(.7em,3.5vw,1em);
+  color:#aa66ff;letter-spacing:.14em;margin-bottom:14px;
+}
+.tut-slide { display:none; }
+.tut-slide.active { display:block; }
+.tut-icon {
+  font-size:clamp(2.8em,12vw,4em);line-height:1;margin-bottom:10px;
+  filter:drop-shadow(0 0 12px rgba(136,0,255,.6));
+}
+.tut-title {
+  font-family:'Dela Gothic One',cursive;font-size:clamp(1.1em,5vw,1.5em);
+  background:linear-gradient(90deg,#ff00cc,#aa00ff,#00aaff);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:10px;line-height:1.2;
+}
+.tut-body {
+  color:#cc99ff;font-size:clamp(.78em,3.5vw,1em);line-height:1.7;font-weight:700;
+}
+.tut-body b { color:#ffdd88; }
+.tut-body em {
+  display:inline-block;margin-top:6px;padding:3px 10px;
+  background:rgba(255,0,0,.15);border:1.5px solid rgba(255,60,60,.6);
+  border-radius:6px;color:#ff8888;font-style:normal;font-size:.9em;
+}
+#tut-dots { display:flex;gap:8px;justify-content:center;margin:16px 0 14px; }
+.tut-dot {
+  width:8px;height:8px;border-radius:50%;
+  background:rgba(136,0,255,.3);border:1.5px solid #5500aa;transition:background .2s;
+}
+.tut-dot.active { background:#aa00ff;box-shadow:0 0 8px #aa00ff; }
+#tut-btn {
+  background:linear-gradient(135deg,#7700ee,#cc00ff);color:#fff;border:none;border-radius:14px;
+  padding:clamp(11px,3.5vw,15px) clamp(28px,9vw,50px);font-size:clamp(.95em,4vw,1.2em);
+  font-family:'Dela Gothic One',cursive;cursor:pointer;letter-spacing:.05em;
+  box-shadow:0 5px 25px rgba(136,0,255,.6);touch-action:manipulation;
+  transition:transform .1s,box-shadow .1s;
+}
+#tut-btn:active { transform:scale(.96);box-shadow:0 2px 14px rgba(136,0,255,.4); }
+
+/* ヘルプボタン */
+#help-btn {
+  background:rgba(136,0,255,.2);border:1.5px solid #5500aa;border-radius:8px;
+  color:#bb88ff;font-size:.75em;font-weight:700;padding:3px 8px;
+  cursor:pointer;touch-action:manipulation;letter-spacing:.04em;
+  margin-left:4px;
+}
 </style>
 </head>
 <body>
@@ -285,6 +347,7 @@ html,body {
       <div class="hud-box"><span class="hud-label">待機</span><span class="hud-val" id="h-queue">0</span></div>
       <div class="hud-box"><span class="hud-label">完了</span><span class="hud-val" id="h-done">0</span></div>
       <div class="hud-box"><span class="hud-label">⏱️</span><span class="hud-val" id="h-time">0s</span></div>
+      <button id="help-btn" onclick="showTutorial()">？</button>
     </div>
   </div>
 
@@ -445,6 +508,61 @@ html,body {
 
 <div id="anger-flash"></div>
 
+<!-- TUTORIAL -->
+<div id="tutorial" class="show">
+  <div id="tut-box">
+    <div id="tut-heading">HOW TO PLAY</div>
+
+    <div class="tut-slide active" id="tut-slide-0">
+      <div class="tut-icon">✂️</div>
+      <div class="tut-title">髪をタップして刈れ！</div>
+      <div class="tut-body">
+        お客さんの<b>頭の髪部分</b>をタップ。<br>
+        4回刈ると坊主完成！<br>
+        切った髪が<b>ヘアタワー</b>に積み上がるよ。
+      </div>
+    </div>
+
+    <div class="tut-slide" id="tut-slide-1">
+      <div class="tut-icon">🚫</div>
+      <div class="tut-title">顔・耳はさわるな！</div>
+      <div class="tut-body">
+        <b>顔</b>や<b>耳</b>をタップすると<br>
+        お客さんが怒って即ゲームオーバー！<br>
+        <em>髪だけ</em>を狙ってタップしよう。
+      </div>
+    </div>
+
+    <div class="tut-slide" id="tut-slide-2">
+      <div class="tut-icon">💬</div>
+      <div class="tut-title">リクエスト客に注意！</div>
+      <div class="tut-body">
+        「左は残して」など注文をしてくる客が登場。<br>
+        頭に表示された<b>赤いNGゾーン</b>は<br>
+        タップすると怒られるので避けよう！
+      </div>
+    </div>
+
+    <div class="tut-slide" id="tut-slide-3">
+      <div class="tut-icon">🧢</div>
+      <div class="tut-title">フェイント客に気をつけろ！</div>
+      <div class="tut-body">
+        帽子をかぶった客は<b>刈ってはいけない！</b><br>
+        帽子を<b>下にスワイプ</b>してかぶせると<br>
+        クリア。髪をタップすると即ゲームオーバー。
+      </div>
+    </div>
+
+    <div id="tut-dots">
+      <span class="tut-dot active"></span>
+      <span class="tut-dot"></span>
+      <span class="tut-dot"></span>
+      <span class="tut-dot"></span>
+    </div>
+    <button id="tut-btn" onclick="tutNext()">次へ →</button>
+  </div>
+</div>
+
 <div id="overlay">
   <div id="ov-box">
     <div id="ov-title">GAME OVER</div>
@@ -493,6 +611,7 @@ function makeState(){
     elapsedSec:0, nextTimer:0,
     baseInterval:4000,
     isAngry:false, hairHeight:0,
+    transitioning:false,  // 客の切り替え中フラグ（タイマーは動かす）
     // 現在の客
     clientType:'normal',  // 'normal'|'request'|'decoy'
     request:null,         // リクエスト客の場合: REQUESTS要素
@@ -538,7 +657,7 @@ const hatEl     = document.getElementById('decoy-hat');
 const swipeHint = document.getElementById('swipe-hint');
 
 function onHatStart(e){
-  if(!G.running || G.clientType !== 'decoy' || G.decoyTriggered) return;
+  if(!G.running || G.clientType !== 'decoy' || G.decoyTriggered || G.transitioning) return;
   e.stopPropagation(); e.preventDefault();
   const pt = getPoint(e);
   swipe = { active:true, startX:pt.x, startY:pt.y };
@@ -568,7 +687,7 @@ window.addEventListener('mouseup',   onHatEnd);
 // ---- 帽子スワイプ成功 ----
 function successDecoy(){
   G.decoyTriggered = true;
-  G.running = false;
+  G.transitioning = true;
   hatEl.classList.remove('show','grabbed');
   hatEl.classList.add('success');
   hatEl.style.display = 'block';
@@ -585,7 +704,7 @@ function successDecoy(){
 
 // ---- キャラへのタップ ----
 function handleTap(e){
-  if(!G.running || G.isAngry) return;
+  if(!G.running || G.isAngry || G.transitioning) return;
   e.preventDefault();
   const pt = getPoint(e);
   const r  = svgEl.getBoundingClientRect();
@@ -860,7 +979,7 @@ function updateProg(){
 }
 
 function completeCut(){
-  G.running=false; G.completedCount++;
+  G.transitioning=true; G.completedCount++;
   mouth.setAttribute('d','M96 192 Q110 202 124 192');
   const isRequest = G.clientType === 'request';
   showMsg(isRequest ? '⭐ リクエスト達成！' : '🎉 坊主完成！', isRequest ? 'fs' : 'fc');
@@ -874,7 +993,7 @@ function nextCustomer(){
     queueTypes.shift();
     renderQueue();
   }
-  G.cutCount=0; G.isAngry=false; G.decoyTriggered=false;
+  G.cutCount=0; G.isAngry=false; G.decoyTriggered=false; G.transitioning=false;
   swipe.active=false;
   resetFace();
   setupClient();
@@ -1034,7 +1153,37 @@ window.addEventListener('resize',()=>{ if(segments.length) drawTower(); renderNG
 document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
 document.addEventListener('contextmenu',e=>e.preventDefault());
 
-startGame();
+// ================================================================
+//  チュートリアル
+// ================================================================
+const TUT_TOTAL = 4;
+let tutPage = 0;
+
+function tutNext(){
+  tutPage++;
+  if(tutPage >= TUT_TOTAL){
+    document.getElementById('tutorial').classList.remove('show');
+    startGame();
+    return;
+  }
+  for(let i=0;i<TUT_TOTAL;i++){
+    document.getElementById(`tut-slide-${i}`).classList.toggle('active', i===tutPage);
+  }
+  document.querySelectorAll('.tut-dot').forEach((d,i)=>d.classList.toggle('active',i===tutPage));
+  const btn = document.getElementById('tut-btn');
+  btn.textContent = tutPage === TUT_TOTAL-1 ? 'ゲームスタート！' : '次へ →';
+}
+
+function showTutorial(){
+  tutPage = 0;
+  for(let i=0;i<TUT_TOTAL;i++){
+    document.getElementById(`tut-slide-${i}`).classList.toggle('active', i===0);
+  }
+  document.querySelectorAll('.tut-dot').forEach((d,i)=>d.classList.toggle('active',i===0));
+  document.getElementById('tut-btn').textContent = '次へ →';
+  document.getElementById('tutorial').classList.add('show');
+  G.running = false;
+}
 </script>
 </body>
 </html>
