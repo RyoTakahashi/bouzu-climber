@@ -200,6 +200,11 @@ html,body {
 #timer-bg { width:100%;height:5px;background:rgba(0,0,0,.5);border:1px solid #2a0044;border-radius:3px;overflow:hidden; }
 #timer-fill { height:100%;background:linear-gradient(90deg,#00cc88,#aaff00,#ff4400);border-radius:3px;transition:width .1s linear; }
 
+/* キャラバリアント変形（首かしげ・高身長） */
+#character-svg.var-tilt-left  { transform:rotate(-22deg); transform-origin:50% 70%; }
+#character-svg.var-tilt-right { transform:rotate( 22deg); transform-origin:50% 70%; }
+#character-svg.var-tall       { transform:scaleY(1.18);   transform-origin:50% 100%; }
+
 /* 次客入店アニメーション */
 @keyframes customerIn {
   0%   { transform:translateX(52px) scale(.86); opacity:0; filter:brightness(2); }
@@ -672,6 +677,7 @@ function makeState(){
     transitioning:false,  // 客の切り替え中フラグ（タイマーは動かす）
     // 現在の客
     clientType:'normal',  // 'normal'|'request'|'decoy'
+    variant:null,         // null|'tilt-left'|'tilt-right'|'tall'（フェイント客には付かない）
     request:null,         // リクエスト客の場合: REQUESTS要素
     decoyTriggered:false,
   };
@@ -760,14 +766,21 @@ function successDecoy(){
   }, 650);
 }
 
+// スクリーン座標 → SVG viewBox座標（preserveAspectRatio のオフセットを正確に考慮）
+function toSVGCoords(clientX, clientY){
+  const pt = svgEl.createSVGPoint();
+  pt.x = clientX; pt.y = clientY;
+  return pt.matrixTransform(svgEl.getScreenCTM().inverse());
+}
+
 // ---- キャラへのタップ ----
 function handleTap(e){
   if(!G.running || G.isAngry || G.transitioning) return;
   e.preventDefault();
-  const pt = getPoint(e);
-  const r  = svgEl.getBoundingClientRect();
-  const sx = (pt.x - r.left) * (220 / r.width);
-  const sy = (pt.y - r.top)  * (310 / r.height);
+  const pt  = getPoint(e);
+  const svgP = toSVGCoords(pt.x, pt.y);
+  const sx   = svgP.x;
+  const sy   = svgP.y;
   const zone = getZone(sx, sy);
 
   // フェイント客：帽子スワイプせずに髪・顔・耳をタップ → ゲームオーバー
@@ -833,9 +846,13 @@ function renderNGOverlay(){
   ngZonesEl.innerHTML = '';
   if(G.clientType !== 'request' || !G.request) return;
 
-  const svgRect = svgEl.getBoundingClientRect();
-  const scaleX  = svgRect.width  / 220;
-  const scaleY  = svgRect.height / 310;
+  // getScreenCTM() でSVGコンテンツの実際のスケール・オフセットを取得
+  const ctm       = svgEl.getScreenCTM();
+  const charRect  = ngZonesEl.getBoundingClientRect(); // ng-zones は inset:0 で char-wrap と同じ矩形
+  const originX   = ctm.e - charRect.left; // char-wrap内でのSVG原点(0,0)のx位置
+  const originY   = ctm.f - charRect.top;
+  const scaleX    = ctm.a;
+  const scaleY    = ctm.d;
 
   for(const zone of G.request.ngZones){
     let defs = [];
@@ -850,8 +867,8 @@ function renderNGOverlay(){
     for(const d of defs){
       const el = document.createElement('div');
       el.className = 'ng-overlay';
-      const px  = (d.cx - d.rx) * scaleX;
-      const py  = (d.cy - d.ry) * scaleY;
+      const px  = originX + (d.cx - d.rx) * scaleX;
+      const py  = originY + (d.cy - d.ry) * scaleY;
       const pw  = d.rx * 2 * scaleX;
       const ph  = d.ry * 2 * scaleY;
       el.style.left   = px + 'px';
@@ -875,12 +892,30 @@ function pickClientType(elapsed){
   return 'normal';
 }
 
+// 20秒以降、フェイント以外の客にランダムでバリアントを付与
+function pickVariant(elapsed, type){
+  if(elapsed < 20 || type === 'decoy') return null;
+  const r = Math.random();
+  if(r < 0.28) return 'tilt-left';
+  if(r < 0.52) return 'tilt-right';
+  if(r < 0.68) return 'tall';
+  return null;
+}
+
 function setupClient(){
-  // キューの先頭タイプを使う（なければ新規決定）
-  const type = queueTypes.length > 0 ? queueTypes[0] : pickClientType(G.elapsedSec);
+  // キューの先頭エントリを使う（なければ新規決定）
+  const _t       = pickClientType(G.elapsedSec);
+  const entry    = queueTypes.length > 0 ? queueTypes[0] : { type: _t, variant: pickVariant(G.elapsedSec, _t) };
+  const type     = entry.type    ?? entry; // 文字列の後方互換
+  const variant  = entry.variant ?? null;
   G.clientType     = type;
+  G.variant        = variant;
   G.request        = null;
   G.decoyTriggered = false;
+
+  // バリアントクラスを SVG に適用（getScreenCTM が変換を自動考慮）
+  svgEl.classList.remove('var-tilt-left','var-tilt-right','var-tall');
+  if(variant) svgEl.classList.add(`var-${variant}`);
 
   // UI リセット
   reqBubble.classList.remove('show');
@@ -1079,12 +1114,13 @@ function resetFace(){
   document.getElementById('pupil-right').setAttribute('fill','#120804');
   angerEmote.textContent='😤';
   progFill.style.width='0%'; progSteps.textContent='0 / 4 回';
+  svgEl.classList.remove('var-tilt-left','var-tilt-right','var-tall');
 }
 
 // ================================================================
 //  待機列
 // ================================================================
-function miniSVG(type){
+function miniSVG(type, variant=null){
   const shirtColor = type === 'request' ? '#aad0ff' : '#9098a8';
   const hairParts  = type !== 'decoy' ? `
     <ellipse cx="110" cy="106" rx="50" ry="42" fill="#180c04"/>
@@ -1119,18 +1155,30 @@ function miniSVG(type){
     ? `<span style="position:absolute;bottom:0;right:2px;font-size:.9em;line-height:1;pointer-events:none;z-index:5;">💬</span>`
     : '';
 
-  return `<div style="position:relative;display:inline-block;">${svgStr}${badge}</div>`;
+  const variantBadge = variant === 'tilt-left'  ? `<span style="position:absolute;top:-4px;left:2px;font-size:.85em;pointer-events:none;z-index:5;">↙️</span>`
+    : variant === 'tilt-right' ? `<span style="position:absolute;top:-4px;right:2px;font-size:.85em;pointer-events:none;z-index:5;">↘️</span>`
+    : variant === 'tall'       ? `<span style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);font-size:.85em;pointer-events:none;z-index:5;">📏</span>`
+    : '';
+
+  const tiltStyle = variant === 'tilt-left' ? 'style="transform:rotate(-18deg);transform-origin:50% 70%;display:inline-block;"'
+    : variant === 'tilt-right' ? 'style="transform:rotate(18deg);transform-origin:50% 70%;display:inline-block;"'
+    : variant === 'tall' ? 'style="transform:scaleY(1.18);transform-origin:50% 100%;display:inline-block;"'
+    : '';
+
+  return `<div style="position:relative;display:inline-block;"><div ${tiltStyle}>${svgStr}</div>${badge}${variantBadge}</div>`;
 }
 
-// キューに並んでいる客のタイプリスト
+// キューに並んでいる客のエントリリスト { type, variant }
 let queueTypes = [];
 
 function renderQueue(){
   queueList.innerHTML='';
   for(let i=0;i<G.queueCount;i++){
-    const type = queueTypes[i] || 'normal';
+    const entry   = queueTypes[i] || { type:'normal', variant:null };
+    const type    = entry.type    ?? entry;
+    const variant = entry.variant ?? null;
     const d=document.createElement('div'); d.className='queue-person';
-    d.innerHTML=miniSVG(type);
+    d.innerHTML=miniSVG(type, variant);
     queueList.appendChild(d);
   }
   document.getElementById('h-queue').textContent=G.queueCount;
@@ -1144,7 +1192,8 @@ function addToQueue(){
     if(r<0.18) type='decoy';
     else if(r<0.50) type='request';
   }
-  queueTypes.push(type);
+  const variant = pickVariant(G.elapsedSec, type);
+  queueTypes.push({ type, variant });
   G.queueCount++; renderQueue();
   if(G.queueCount>=10) gameOver('待機列が10人に達した！');
 }
@@ -1193,10 +1242,10 @@ function tick(now){
     G.elapsedSec+=dt/1000;
     document.getElementById('h-time').textContent=Math.floor(G.elapsedSec)+'s';
     G.nextTimer+=dt;
-    // 0〜10秒: 1倍→2倍に線形加速、10秒以降: 10秒ごとに0.5倍加算
+    // 0〜10秒: 1倍→2倍に線形加速、10秒以降: 10秒ごとに0.3倍加算
     const speed = G.elapsedSec < 10
       ? 1 + G.elapsedSec / 10
-      : 2 + 0.5 * Math.floor((G.elapsedSec - 10) / 10);
+      : 2 + 0.3 * Math.floor((G.elapsedSec - 10) / 10);
     const interval = G.baseInterval / speed;
     timerFill.style.width=Math.max(0,(1-G.nextTimer/interval)*100)+'%';
     if(G.nextTimer>=interval){ G.nextTimer=0; addToQueue(); }
