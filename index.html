@@ -287,6 +287,24 @@ html,body {
 #record-text { font-family:'Dela Gothic One',cursive;font-size:.7em;color:#ffff00;text-shadow:0 0 18px #ffaa00;white-space:nowrap;transform:rotate(-12deg); }
 @keyframes recPop { 0%{opacity:0;transform:scale(.5)} 30%{opacity:1;transform:scale(1.1)} 70%{opacity:1} 100%{opacity:0;transform:scale(.8)} }
 
+/* タワー傾きインジケーター */
+#tilt-bar { width:100%;padding:2px 0 4px; }
+#tilt-bar-label { color:#7755aa;font-size:.42em;font-weight:700;text-align:center;display:block;margin-bottom:2px;letter-spacing:.06em; }
+#tilt-track {
+  width:100%;height:7px;background:rgba(0,0,0,.55);border:1.5px solid #2a0044;
+  border-radius:4px;position:relative;
+}
+#tilt-track::before {
+  content:'';position:absolute;left:50%;top:0;bottom:0;width:1px;
+  background:rgba(136,0,255,.45);transform:translateX(-50%);z-index:1;
+}
+#tilt-marker {
+  position:absolute;top:50%;width:6px;height:13px;border-radius:3px;
+  transform:translate(-50%,-50%);left:50%;
+  transition:left .12s ease,background-color .2s;
+  background:#00ff88;box-shadow:0 0 6px #00ff88;z-index:2;
+}
+
 /* BOTTOM BAR */
 #bottom-bar { display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:#2a0044;border-top:2px solid var(--purple); }
 .bstat { background:#0a0015;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5px 4px; }
@@ -565,6 +583,10 @@ html,body {
         <canvas id="tower-canvas"></canvas>
         <div id="record-flash"><div id="record-text">🏆NEW!</div></div>
       </div>
+      <div id="tilt-bar">
+        <span id="tilt-bar-label">⚖️ バランス</span>
+        <div id="tilt-track"><div id="tilt-marker"></div></div>
+      </div>
       <div id="score-box">
         <span id="score-label">📏 高さ</span>
         <span id="score-val">0</span>
@@ -717,6 +739,7 @@ function makeState(){
     baseInterval:4000,
     isAngry:false, hairHeight:0,
     transitioning:false,  // 客の切り替え中フラグ（タイマーは動かす）
+    towerTilt:0,          // タワー傾き（-100〜+100、正=右傾き）
     // 現在の客
     clientType:'normal',  // 'normal'|'request'|'decoy'
     variant:null,         // null|'tilt-left'|'tilt-right'|'tall'（フェイント客には付かない）
@@ -808,6 +831,19 @@ function successDecoy(){
   }, 650);
 }
 
+// ================================================================
+//  タワー傾きインジケーター更新
+// ================================================================
+function updateTilt(){
+  const marker = document.getElementById('tilt-marker');
+  const pct = 50 + (G.towerTilt / 100) * 46; // 中央50%、端方向へ最大46%
+  marker.style.left = pct + '%';
+  const abs = Math.abs(G.towerTilt);
+  const hue = abs < 40 ? 140 : abs < 70 ? 48 : 0; // 緑→黄→赤
+  marker.style.backgroundColor = `hsl(${hue},100%,58%)`;
+  marker.style.boxShadow = `0 0 6px hsl(${hue},100%,58%)`;
+}
+
 // スクリーン座標 → SVG viewBox座標（preserveAspectRatio のオフセットを正確に考慮）
 function toSVGCoords(clientX, clientY){
   const pt = svgEl.createSVGPoint();
@@ -845,6 +881,22 @@ function handleTap(e){
     updateHair(); updateProg();
     showMsg(`✂️ +${added}cm`, 'fs');
     document.getElementById('b-cuts').textContent = G.cutTotal;
+
+    // タワー傾き：タップ位置の左右で傾きが変わる（SVG中心=110）
+    const tiltDelta = (sx - 110) / 110 * 9;
+    // ラッキーボーナス：リクエスト客が現在の傾きを修正する方向のカットを強制した場合
+    if(G.clientType === 'request' && Math.abs(G.towerTilt) > 12){
+      const correcting = (G.towerTilt > 0 && tiltDelta < 0) || (G.towerTilt < 0 && tiltDelta > 0);
+      if(correcting){
+        const bonus = 6 + Math.floor(Math.random() * 9); // 6〜14cm
+        addHair(bonus, pt.x, pt.y - 20);
+        showMsg(`⚖️ バランス補正！+${bonus}cm`, 'fc');
+      }
+    }
+    G.towerTilt = Math.max(-100, Math.min(100, G.towerTilt + tiltDelta));
+    updateTilt();
+    if(Math.abs(G.towerTilt) >= 85){ gameOver('ヘアタワーが倒れた！'); return; }
+
     if(G.cutCount >= (G.variant === 'sway' ? 2 : 4)) completeCut();
   } else if(zone === 'face' || zone === 'ear'){
     doAngry(zone);
@@ -1053,7 +1105,13 @@ function drawTower(){
   const wrap=document.getElementById('tower-wrap');
   const wrapW=wrap.clientWidth||80, wrapH=wrap.clientHeight||300;
   canvas.width=wrapW; canvas.height=wrapH; ctx.clearRect(0,0,wrapW,wrapH);
-  if(!segments.length){ drawFloor(wrapW,wrapH); return; }
+
+  // タワーを傾けて描画（底面中央を支点に最大±20°）
+  const tiltRad = (G.towerTilt / 100) * 20 * Math.PI / 180;
+  ctx.save();
+  ctx.translate(wrapW/2, wrapH); ctx.rotate(tiltRad); ctx.translate(-wrapW/2, -wrapH);
+
+  if(!segments.length){ drawFloor(wrapW,wrapH); ctx.restore(); return; }
   const pxPerCm=Math.min(wrapH*.9/G.hairHeight,10); let curY=wrapH-3;
   segments.forEach((seg,i)=>{
     const sH=Math.max(3,seg.h*pxPerCm);
@@ -1085,6 +1143,7 @@ function drawTower(){
   grd.addColorStop(0,'rgba(255,200,80,.22)'); grd.addColorStop(1,'rgba(255,200,80,0)');
   ctx.fillStyle=grd; ctx.fillRect(0,curY-30,wrapW,60);
   drawFloor(wrapW,wrapH);
+  ctx.restore();
 }
 function drawFloor(w,h){ ctx.strokeStyle='#2a0044'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(0,h-2); ctx.lineTo(w,h-2); ctx.stroke(); }
 
@@ -1307,6 +1366,14 @@ function tick(now){
     const interval = G.baseInterval / speed;
     timerFill.style.width=Math.max(0,(1-G.nextTimer/interval)*100)+'%';
     if(G.nextTimer>=interval){ G.nextTimer=0; addToQueue(); }
+
+    // タワー傾きの自然減衰（約0.35/秒ずつ戻る）
+    if(G.towerTilt !== 0){
+      G.towerTilt *= Math.max(0, 1 - 0.35 * dt/1000);
+      if(Math.abs(G.towerTilt) < 0.15) G.towerTilt = 0;
+      updateTilt();
+      if(segments.length) drawTower();
+    }
   }
   rafId=requestAnimationFrame(tick);
 }
@@ -1314,6 +1381,7 @@ function tick(now){
 function startGame(){
   G=makeState(); G.running=true; segments=[]; queueTypes=[];
   overlayEl.classList.remove('show');
+  updateTilt();
   queueList.innerHTML='';
   resetFace();
   reqBubble.classList.remove('show');
