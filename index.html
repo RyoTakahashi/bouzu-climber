@@ -883,9 +883,9 @@ function handleTap(e){
     document.getElementById('b-cuts').textContent = G.cutTotal;
 
     // タワー傾き：タップ位置の左右で傾きが変わる（SVG中心=110）
-    const tiltDelta = (sx - 110) / 110 * 9;
+    const tiltDelta = (sx - 110) / 110 * 22;
     // ラッキーボーナス：リクエスト客が現在の傾きを修正する方向のカットを強制した場合
-    if(G.clientType === 'request' && Math.abs(G.towerTilt) > 12){
+    if(G.clientType === 'request' && Math.abs(G.towerTilt) > 8){
       const correcting = (G.towerTilt > 0 && tiltDelta < 0) || (G.towerTilt < 0 && tiltDelta > 0);
       if(correcting){
         const bonus = 6 + Math.floor(Math.random() * 9); // 6〜14cm
@@ -1369,7 +1369,7 @@ function tick(now){
 
     // タワー傾きの自然減衰（約0.35/秒ずつ戻る）
     if(G.towerTilt !== 0){
-      G.towerTilt *= Math.max(0, 1 - 0.35 * dt/1000);
+      G.towerTilt *= Math.max(0, 1 - 0.18 * dt/1000);
       if(Math.abs(G.towerTilt) < 0.15) G.towerTilt = 0;
       updateTilt();
       if(segments.length) drawTower();
