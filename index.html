@@ -223,6 +223,11 @@ html,body {
 #ng-zones.var-tilt-right { transform:rotate( 22deg); transform-origin:50% 70%; }
 #character-svg.var-tall,
 #ng-zones.var-tall        { transform:scaleY(1.18);  transform-origin:50% 100%; }
+#character-svg.var-sway   { animation:svgSway 1.0s ease-in-out infinite; transform-origin:50% 76%; }
+@keyframes svgSway {
+  0%,100% { transform:rotate(-20deg); }
+  50%     { transform:rotate( 20deg); }
+}
 
 /* 次客入店アニメーション */
 @keyframes customerIn {
@@ -840,7 +845,7 @@ function handleTap(e){
     updateHair(); updateProg();
     showMsg(`✂️ +${added}cm`, 'fs');
     document.getElementById('b-cuts').textContent = G.cutTotal;
-    if(G.cutCount >= 4) completeCut();
+    if(G.cutCount >= (G.variant === 'sway' ? 2 : 4)) completeCut();
   } else if(zone === 'face' || zone === 'ear'){
     doAngry(zone);
   }
@@ -928,12 +933,14 @@ function pickClientType(elapsed){
 }
 
 // 20秒以降、フェイント以外の客にランダムでバリアントを付与
+// sway はノーマル客のみ（リクエスト客との組み合わせはNG判定が複雑なため除外）
 function pickVariant(elapsed, type){
   if(elapsed < 20 || type === 'decoy') return null;
   const r = Math.random();
-  if(r < 0.28) return 'tilt-left';
-  if(r < 0.52) return 'tilt-right';
-  if(r < 0.68) return 'tall';
+  if(r < 0.22) return 'tilt-left';
+  if(r < 0.42) return 'tilt-right';
+  if(r < 0.56) return 'tall';
+  if(r < 0.72 && type === 'normal') return 'sway';
   return null;
 }
 
@@ -973,6 +980,8 @@ function setupClient(entry = null){
     decoyBubble.classList.add('show');
     swipeHint.classList.add('show');
   }
+  // バリアントに応じた進捗表示を初期化
+  updateProg();
 }
 
 // ================================================================
@@ -1099,13 +1108,16 @@ function spawnParticles(fromX,fromY){
 function updateHair(){
   for(let i=1;i<=4;i++) document.getElementById(`hair-layer-${i}`).setAttribute('visibility','hidden');
   document.getElementById('hair-bald').setAttribute('visibility','hidden');
-  const rem=4-G.cutCount;
+  // sway は2カット: cutCount 0→layer4, 1→layer2, 2→bald
+  // 通常は4カット: cutCount 0→layer4, 1→layer3, 2→layer2, 3→layer1, 4→bald
+  const rem = G.variant === 'sway' ? 4 - G.cutCount * 2 : 4 - G.cutCount;
   if(rem>=1&&rem<=4) document.getElementById(`hair-layer-${rem}`).setAttribute('visibility','visible');
   else document.getElementById('hair-bald').setAttribute('visibility','visible');
 }
 function updateProg(){
-  progFill.style.width=Math.min(100,(G.cutCount/4)*100)+'%';
-  progSteps.textContent=`${Math.min(4,G.cutCount)} / 4 回`;
+  const max = G.variant === 'sway' ? 2 : 4;
+  progFill.style.width=Math.min(100,(G.cutCount/max)*100)+'%';
+  progSteps.textContent=`${Math.min(max,G.cutCount)} / ${max} 回`;
 }
 
 function completeCut(){
@@ -1153,7 +1165,7 @@ function resetFace(){
   document.getElementById('pupil-right').setAttribute('fill','#120804');
   angerEmote.textContent='😤';
   progFill.style.width='0%'; progSteps.textContent='0 / 4 回';
-  svgEl.classList.remove('var-tilt-left','var-tilt-right','var-tall');
+  svgEl.classList.remove('var-tilt-left','var-tilt-right','var-tall','var-sway');
   ngZonesEl.classList.remove('var-tilt-left','var-tilt-right','var-tall');
 }
 
@@ -1198,11 +1210,13 @@ function miniSVG(type, variant=null){
   const variantBadge = variant === 'tilt-left'  ? `<span style="position:absolute;top:-4px;left:2px;font-size:.85em;pointer-events:none;z-index:5;">↙️</span>`
     : variant === 'tilt-right' ? `<span style="position:absolute;top:-4px;right:2px;font-size:.85em;pointer-events:none;z-index:5;">↘️</span>`
     : variant === 'tall'       ? `<span style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);font-size:.85em;pointer-events:none;z-index:5;">📏</span>`
+    : variant === 'sway'       ? `<span style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);font-size:.85em;pointer-events:none;z-index:5;">〰️</span>`
     : '';
 
-  const tiltStyle = variant === 'tilt-left' ? 'style="transform:rotate(-18deg);transform-origin:50% 70%;display:inline-block;"'
+  const tiltStyle = variant === 'tilt-left'  ? 'style="transform:rotate(-18deg);transform-origin:50% 70%;display:inline-block;"'
     : variant === 'tilt-right' ? 'style="transform:rotate(18deg);transform-origin:50% 70%;display:inline-block;"'
-    : variant === 'tall' ? 'style="transform:scaleY(1.18);transform-origin:50% 100%;display:inline-block;"'
+    : variant === 'tall'       ? 'style="transform:scaleY(1.18);transform-origin:50% 100%;display:inline-block;"'
+    : variant === 'sway'       ? 'style="animation:svgSway .9s ease-in-out infinite;transform-origin:50% 76%;display:inline-block;"'
     : '';
 
   return `<div style="position:relative;display:inline-block;"><div ${tiltStyle}>${svgStr}</div>${badge}${variantBadge}</div>`;
