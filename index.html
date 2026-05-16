@@ -379,6 +379,13 @@ html,body {
   text-align:center;width:100%;max-width:360px;
   box-shadow:0 0 70px rgba(136,0,255,.6),inset 0 0 40px rgba(136,0,255,.08);
   animation:popIn .4s cubic-bezier(.34,1.56,.64,1);
+  position:relative;
+}
+#tut-lang-btn {
+  position:absolute;top:12px;right:12px;
+  background:rgba(136,0,255,.2);border:1.5px solid #5500aa;border-radius:8px;
+  color:#bb88ff;font-size:.75em;font-weight:700;padding:3px 8px;
+  cursor:pointer;touch-action:manipulation;letter-spacing:.04em;
 }
 #tut-heading {
   font-family:'Dela Gothic One',cursive;font-size:clamp(.7em,3.5vw,1em);
@@ -616,6 +623,7 @@ html,body {
 <!-- TUTORIAL -->
 <div id="tutorial" class="show">
   <div id="tut-box">
+    <button id="tut-lang-btn" onclick="toggleLang()">EN</button>
     <div id="tut-heading">HOW TO PLAY</div>
 
     <div class="tut-slide active" id="tut-slide-0">
@@ -1579,6 +1587,8 @@ function applyLang(){
   if(shareBtnText) shareBtnText.textContent = l.shareBtn;
   const langBtn = document.getElementById('lang-btn');
   if(langBtn) langBtn.textContent = currentLang==='ja' ? 'EN' : 'JA';
+  const tutLangBtn = document.getElementById('tut-lang-btn');
+  if(tutLangBtn) tutLangBtn.textContent = currentLang==='ja' ? 'EN' : 'JA';
   const tutHeading = document.getElementById('tut-heading');
   if(tutHeading) tutHeading.textContent = l.tutHeading;
   const tutBtn = document.getElementById('tut-btn');
