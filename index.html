@@ -427,6 +427,12 @@ html,body {
   cursor:pointer;touch-action:manipulation;letter-spacing:.04em;
   margin-left:4px;
 }
+#lang-btn {
+  background:rgba(136,0,255,.2);border:1.5px solid #5500aa;border-radius:8px;
+  color:#bb88ff;font-size:.75em;font-weight:700;padding:3px 8px;
+  cursor:pointer;touch-action:manipulation;letter-spacing:.04em;
+  margin-left:4px;
+}
 </style>
 </head>
 <body>
@@ -437,10 +443,11 @@ html,body {
       <div id="title-text">BOUZU CLIMBER<span id="subtitle">〜坊主への道〜</span></div>
     </div>
     <div id="hud">
-      <div class="hud-box"><span class="hud-label">待機</span><span class="hud-val" id="h-queue">0</span></div>
-      <div class="hud-box"><span class="hud-label">完了</span><span class="hud-val" id="h-done">0</span></div>
+      <div class="hud-box"><span class="hud-label" id="hud-queue-label">待機</span><span class="hud-val" id="h-queue">0</span></div>
+      <div class="hud-box"><span class="hud-label" id="hud-done-label">完了</span><span class="hud-val" id="h-done">0</span></div>
       <div class="hud-box"><span class="hud-label">⏱️</span><span class="hud-val" id="h-time">0s</span></div>
       <button id="help-btn" onclick="showTutorial()">？</button>
+      <button id="lang-btn" onclick="toggleLang()">EN</button>
     </div>
   </div>
 
@@ -597,9 +604,9 @@ html,body {
   </div>
 
   <div id="bottom-bar">
-    <div class="bstat"><span class="bstat-label">✂️ 刈り回数</span><span class="bstat-val" id="b-cuts">0</span></div>
-    <div class="bstat"><span class="bstat-label">😡 怒られ</span><span class="bstat-val" id="b-anger">0</span></div>
-    <div class="bstat"><span class="bstat-label">🏆 ベスト</span><span class="bstat-val" id="b-best">0cm</span></div>
+    <div class="bstat"><span class="bstat-label" id="b-cuts-label">✂️ 刈り回数</span><span class="bstat-val" id="b-cuts">0</span></div>
+    <div class="bstat"><span class="bstat-label" id="b-anger-label">😡 怒られ</span><span class="bstat-val" id="b-anger">0</span></div>
+    <div class="bstat"><span class="bstat-label" id="b-best-label">🏆 ベスト</span><span class="bstat-val" id="b-best">0cm</span></div>
   </div>
 
 </div>
@@ -681,7 +688,7 @@ html,body {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
           <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.734-8.835L1.254 2.25H8.08l4.253 5.622 5.91-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
         </svg>
-        Xでシェア
+        <span id="share-btn-text">Xでシェア</span>
       </button>
       <button id="restart-btn" onclick="startGame()">🔄 もう一度登る</button>
     </div>
@@ -695,16 +702,103 @@ html,body {
 //  D: フェイント客 — 帽子あり、タップした瞬間「やめます！」即死
 // ================================================================
 
+const LANG = {
+  ja: {
+    subtitle:'〜坊主への道〜',
+    hudQueue:'待機', hudDone:'完了',
+    queueLabel:'列',
+    scoreLbl:'📏 高さ',
+    progLabel:'✂️ バリカン進捗',
+    timerLabel:'次の客が来るまで...',
+    tiltLabel:'⚖️ バランス',
+    bCuts:'✂️ 刈り回数', bAnger:'😡 怒られ', bBest:'🏆 ベスト',
+    ovRankLabel:'あなたの称号',
+    restartBtn:'🔄 もう一度登る',
+    shareBtn:'Xでシェア',
+    customerCall:'次のお客様〜！',
+    swipeHint:'⬇️ 頭にかぶせて！',
+    decoyMain:'「やっぱり…どうしようかな」',
+    decoyHint:'🧢 帽子を下にスワイプ！',
+    decoyOk:'「ありがとうございます！」',
+    decoyNg:'「やっぱやめます！！」',
+    ngYell:'「そこじゃない！！」',
+    completeNormal:'🎉 坊主完成！',
+    completeRequest:'⭐ リクエスト達成！',
+    decoySuccessMsg:'🧢 うまくかぶせた！',
+    decoyFailMsg:'🧢 刈ろうとした！',
+    balanceMsg: cm=>`⚖️ バランス補正！+${cm}cm`,
+    cutMsg: cm=>`✂️ +${cm}cm`,
+    ovSub:(c,a)=>`坊主: ${c}人 ／ 怒られ: ${a}回`,
+    progFmt:(c,m)=>`${c} / ${m} 回`,
+    gameOverTower:'ヘアタワーが倒れた！',
+    gameOverQueue:'待機列が10人に達した！',
+    gameOverDecoy:'フェイント客を刈ろうとした！',
+    faceReason:'顔を刈った！', earReason:'耳を刈った！',
+    ngReasons:{left:'左の髪を刈った！',right:'右の髪を刈った！',front:'前髪を刈った！',ears:'耳周りを刈った！'},
+    shareText:(rank,h,c)=>`✂️ BOUZU CLIMBER\n${rank.icon} ${rank.name} 達成！\nヘアタワー ${h}cm / 坊主 ${c}人\n#BOUZUCLIMBER`,
+    tutHeading:'HOW TO PLAY', tutNext:'次へ →', tutStart:'ゲームスタート！',
+    tuts:[
+      {icon:'✂️',title:'髪をタップして刈れ！',body:'お客さんの<b>頭の髪部分</b>をタップ。<br>4回刈ると坊主完成！<br>切った髪が<b>ヘアタワー</b>に積み上がるよ。'},
+      {icon:'🚫',title:'顔・耳はさわるな！',body:'<b>顔</b>や<b>耳</b>をタップすると<br>お客さんが怒って即ゲームオーバー！<br><em>髪だけ</em>を狙ってタップしよう。'},
+      {icon:'💬',title:'リクエスト客に注意！',body:'「左は残して」など注文をしてくる客が登場。<br>頭に表示された<b>赤いNGゾーン</b>は<br>タップすると怒られるので避けよう！'},
+      {icon:'🧢',title:'フェイント客に気をつけろ！',body:'帽子をかぶった客は<b>刈ってはいけない！</b><br>帽子を<b>下にスワイプ</b>してかぶせると<br>クリア。髪をタップすると即ゲームオーバー。'},
+    ],
+  },
+  en: {
+    subtitle:'~Road to Baldness~',
+    hudQueue:'Queue', hudDone:'Done',
+    queueLabel:'Line',
+    scoreLbl:'📏 Height',
+    progLabel:'✂️ Clipper Progress',
+    timerLabel:'Next customer...',
+    tiltLabel:'⚖️ Balance',
+    bCuts:'✂️ Cuts', bAnger:'😡 Anger', bBest:'🏆 Best',
+    ovRankLabel:'Your Rank',
+    restartBtn:'🔄 Try Again',
+    shareBtn:'Share on X',
+    customerCall:'Next customer!',
+    swipeHint:'⬇️ Swipe hat down!',
+    decoyMain:'"Hmm... should I?"',
+    decoyHint:'🧢 Swipe hat down!',
+    decoyOk:'"Thank you!"',
+    decoyNg:'"I\'m leaving!!"',
+    ngYell:'"Not there!!"',
+    completeNormal:'🎉 Bald Complete!',
+    completeRequest:'⭐ Request Done!',
+    decoySuccessMsg:'🧢 Hat placed!',
+    decoyFailMsg:'🧢 Tried to cut!',
+    balanceMsg: cm=>`⚖️ Balance Bonus! +${cm}cm`,
+    cutMsg: cm=>`✂️ +${cm}cm`,
+    ovSub:(c,a)=>`Bald: ${c} / Anger: ${a}`,
+    progFmt:(c,m)=>`${c} / ${m}`,
+    gameOverTower:'Hair tower collapsed!',
+    gameOverQueue:'Queue reached 10 people!',
+    gameOverDecoy:'Tried to cut the decoy!',
+    faceReason:'Cut the face!', earReason:'Cut the ear!',
+    ngReasons:{left:'Cut left hair!',right:'Cut right hair!',front:'Cut the bangs!',ears:'Cut around ears!'},
+    shareText:(rank,h,c)=>`✂️ BOUZU CLIMBER\n${rank.icon} ${rank.nameEn}!\nHair Tower: ${h}cm / Bald: ${c}\n#BOUZUCLIMBER`,
+    tutHeading:'HOW TO PLAY', tutNext:'Next →', tutStart:'Start Game!',
+    tuts:[
+      {icon:'✂️',title:'Tap the hair!',body:'Tap the <b>hair on the head</b>.<br>4 cuts = bald complete!<br>Cut hair stacks up as a <b>Hair Tower</b>.'},
+      {icon:'🚫',title:"Don't touch face/ears!",body:'Tapping the <b>face</b> or <b>ears</b><br>angers the customer — instant game over!<br>Aim for <em>hair only</em>.'},
+      {icon:'💬',title:'Watch for Request Customers!',body:'Some customers make special requests.<br>The <b>red NG zones</b> on their head<br>are off-limits — avoid them!'},
+      {icon:'🧢',title:'Watch out for Decoys!',body:'Customers with a hat <b>must NOT be cut!</b><br><b>Swipe the hat downward</b> to place it.<br>Tapping the hair = instant game over.'},
+    ],
+  },
+};
+let currentLang = localStorage.getItem('bcLang') || 'ja';
+function L(key,...args){ const v=LANG[currentLang][key]; return typeof v==='function'?v(...args):(v??key); }
+
 const RANKS = [
-  { min:    0, max:  150, icon:'🐒', name:'お猿さん級',          color:'#cc8844', border:'#7a4a1a', bg:'rgba(150,80,10,.18)'   },
-  { min:  150, max:  200, icon:'🧑', name:'ホモ・サピエンス級',   color:'#88ccff', border:'#2266aa', bg:'rgba(30,80,180,.18)'   },
-  { min:  200, max:  500, icon:'🐘', name:'ゾウさん級',           color:'#aaddaa', border:'#337733', bg:'rgba(30,120,50,.18)'   },
-  { min:  500, max: 1000, icon:'🦒', name:'キリンさん級',         color:'#ffdd44', border:'#aa8800', bg:'rgba(180,130,0,.18)'   },
-  { min: 1000, max: 2000, icon:'🐋', name:'シロナガスクジラ級',   color:'#44bbff', border:'#006699', bg:'rgba(0,80,160,.18)'    },
-  { min: 2000, max: 3000, icon:'🗿', name:'大仏級',               color:'#ffcc66', border:'#997700', bg:'rgba(160,110,0,.18)'   },
-  { min: 3000, max: 4000, icon:'🗼', name:'東京タワー見習い級',   color:'#ff7744', border:'#cc3300', bg:'rgba(180,50,0,.18)'    },
-  { min: 4000, max: 5000, icon:'🚀', name:'宇宙ロケット級',       color:'#aabbff', border:'#3344cc', bg:'rgba(30,40,180,.18)'   },
-  { min: 5000, max: Infinity, icon:'🏔️', name:'チョモランマ級',  color:'#eef6ff', border:'#88aacc', bg:'rgba(100,140,200,.18)' },
+  { min:    0, max:  150, icon:'🐒', name:'お猿さん級',          nameEn:'Monkey Class',         color:'#cc8844', border:'#7a4a1a', bg:'rgba(150,80,10,.18)'   },
+  { min:  150, max:  200, icon:'🧑', name:'ホモ・サピエンス級',   nameEn:'Homo Sapiens Class',    color:'#88ccff', border:'#2266aa', bg:'rgba(30,80,180,.18)'   },
+  { min:  200, max:  500, icon:'🐘', name:'ゾウさん級',           nameEn:'Elephant Class',        color:'#aaddaa', border:'#337733', bg:'rgba(30,120,50,.18)'   },
+  { min:  500, max: 1000, icon:'🦒', name:'キリンさん級',         nameEn:'Giraffe Class',         color:'#ffdd44', border:'#aa8800', bg:'rgba(180,130,0,.18)'   },
+  { min: 1000, max: 2000, icon:'🐋', name:'シロナガスクジラ級',   nameEn:'Blue Whale Class',      color:'#44bbff', border:'#006699', bg:'rgba(0,80,160,.18)'    },
+  { min: 2000, max: 3000, icon:'🗿', name:'大仏級',               nameEn:'Great Buddha Class',    color:'#ffcc66', border:'#997700', bg:'rgba(160,110,0,.18)'   },
+  { min: 3000, max: 4000, icon:'🗼', name:'東京タワー見習い級',   nameEn:'Tokyo Tower Class',     color:'#ff7744', border:'#cc3300', bg:'rgba(180,50,0,.18)'    },
+  { min: 4000, max: 5000, icon:'🚀', name:'宇宙ロケット級',       nameEn:'Rocket Class',          color:'#aabbff', border:'#3344cc', bg:'rgba(30,40,180,.18)'   },
+  { min: 5000, max: Infinity, icon:'🏔️', name:'チョモランマ級',  nameEn:'Mt. Everest Class',     color:'#eef6ff', border:'#88aacc', bg:'rgba(100,140,200,.18)' },
 ];
 
 function getRank(cm){
@@ -712,10 +806,10 @@ function getRank(cm){
 }
 
 const REQUESTS = [
-  { label:'「左は残して」',  ngZones:['left']  },
-  { label:'「右は残して」',  ngZones:['right'] },
-  { label:'「前髪だけ残して」', ngZones:['front'] },
-  { label:'「耳周りNG」',    ngZones:['ears']  },
+  { label:'「左は残して」',      labelEn:'"Keep the left"',  ngZones:['left']  },
+  { label:'「右は残して」',      labelEn:'"Keep the right"', ngZones:['right'] },
+  { label:'「前髪だけ残して」',  labelEn:'"Keep the bangs"', ngZones:['front'] },
+  { label:'「耳周りNG」',        labelEn:'"No ears"',        ngZones:['ears']  },
 ];
 
 // NGゾーンのSVG座標領域 (viewBox 220×310)
@@ -821,10 +915,10 @@ function successDecoy(){
   hatEl.classList.add('success');
   hatEl.style.display = 'block';
   swipeHint.classList.remove('show');
-  decoyBubble.innerHTML = '「ありがとうございます！」';
+  decoyBubble.innerHTML = L('decoyOk');
   decoyBubble.classList.remove('show'); void decoyBubble.offsetWidth; decoyBubble.classList.add('show');
   mouth.setAttribute('d','M96 192 Q110 202 124 192');
-  showMsg('🧢 うまくかぶせた！','fc');
+  showMsg(L('decoySuccessMsg'),'fc');
   setTimeout(()=>{
     hatEl.classList.remove('success'); hatEl.style.display='';
     nextCustomer();
@@ -879,7 +973,7 @@ function handleTap(e){
     const added = 2 + Math.floor(Math.random() * 4);
     addHair(added, pt.x, pt.y);
     updateHair(); updateProg();
-    showMsg(`✂️ +${added}cm`, 'fs');
+    showMsg(L('cutMsg', added), 'fs');
     document.getElementById('b-cuts').textContent = G.cutTotal;
 
     // タワー傾き：タップ位置の左右で傾きが変わる（SVG中心=110）
@@ -890,12 +984,12 @@ function handleTap(e){
       if(correcting){
         const bonus = 6 + Math.floor(Math.random() * 9); // 6〜14cm
         addHair(bonus, pt.x, pt.y - 20);
-        showMsg(`⚖️ バランス補正！+${bonus}cm`, 'fc');
+        showMsg(L('balanceMsg', bonus), 'fc');
       }
     }
     G.towerTilt = Math.max(-100, Math.min(100, G.towerTilt + tiltDelta));
     updateTilt();
-    if(Math.abs(G.towerTilt) >= 85){ gameOver('ヘアタワーが倒れた！'); return; }
+    if(Math.abs(G.towerTilt) >= 85){ gameOver(L('gameOverTower')); return; }
 
     if(G.cutCount >= (G.variant === 'sway' ? 2 : 4)) completeCut();
   } else if(zone === 'face' || zone === 'ear'){
@@ -1023,12 +1117,12 @@ function setupClient(entry = null){
 
   if(type === 'request'){
     G.request = REQUESTS[Math.floor(Math.random() * REQUESTS.length)];
-    reqBubble.textContent = G.request.label;
+    reqBubble.textContent = currentLang==='ja' ? G.request.label : G.request.labelEn;
     reqBubble.classList.add('show');
     setTimeout(renderNGOverlay, 50);
   } else if(type === 'decoy'){
     decoyHat.classList.add('show');
-    decoyBubble.innerHTML = '「やっぱり…どうしようかな」<br><small style="font-size:.8em;color:#aaffff;">🧢 帽子を下にスワイプ！</small>';
+    decoyBubble.innerHTML = `${L('decoyMain')}<br><small style="font-size:.8em;color:#aaffff;">${L('decoyHint')}</small>`;
     decoyBubble.classList.add('show');
     swipeHint.classList.add('show');
   }
@@ -1046,7 +1140,7 @@ function triggerDecoyGameOver(){
   G.angerCount++;
   document.getElementById('b-anger').textContent = G.angerCount;
 
-  decoyBubble.innerHTML = '「やっぱやめます！！」';
+  decoyBubble.innerHTML = L('decoyNg');
   decoyBubble.classList.remove('show'); void decoyBubble.offsetWidth; decoyBubble.classList.add('show');
   mouth.setAttribute('d','M98 196 Q110 188 122 196');
   document.getElementById('pupil-left').setAttribute('fill','#cc0000');
@@ -1054,19 +1148,18 @@ function triggerDecoyGameOver(){
   angerFlash.style.opacity='1'; setTimeout(()=>{ angerFlash.style.opacity='0'; }, 200);
   angerEmote.textContent='🫵';
   angerEmote.classList.remove('show'); void angerEmote.offsetWidth; angerEmote.classList.add('show');
-  showMsg('🧢 刈ろうとした！', 'fd');
-  setTimeout(()=> gameOver('フェイント客を刈ろうとした！'), 900);
+  showMsg(L('decoyFailMsg'), 'fd');
+  setTimeout(()=> gameOver(L('gameOverDecoy')), 900);
 }
 function doAngryRequest(zone){
-  const zoneNames = { left:'左の髪', right:'右の髪', front:'前髪', ears:'耳周り' };
-  const label = `${zoneNames[zone] || 'NGゾーン'}を刈った！`;
-  reqBubble.textContent = '「そこじゃない！！」';
+  const label = LANG[currentLang].ngReasons[zone] || 'NG!';
+  reqBubble.textContent = L('ngYell');
   reqBubble.classList.remove('show'); void reqBubble.offsetWidth; reqBubble.classList.add('show');
   doAngryBase(label);
 }
 
 function doAngry(zone){
-  const label = zone==='ear' ? '耳を刈った！' : '顔を刈った！';
+  const label = zone==='ear' ? L('earReason') : L('faceReason');
   doAngryBase(label);
 }
 
@@ -1176,14 +1269,14 @@ function updateHair(){
 function updateProg(){
   const max = G.variant === 'sway' ? 2 : 4;
   progFill.style.width=Math.min(100,(G.cutCount/max)*100)+'%';
-  progSteps.textContent=`${Math.min(max,G.cutCount)} / ${max} 回`;
+  progSteps.textContent = L('progFmt', Math.min(max,G.cutCount), max);
 }
 
 function completeCut(){
   G.transitioning=true; G.completedCount++;
   mouth.setAttribute('d','M96 192 Q110 202 124 192');
   const isRequest = G.clientType === 'request';
-  showMsg(isRequest ? '⭐ リクエスト達成！' : '🎉 坊主完成！', isRequest ? 'fs' : 'fc');
+  showMsg(isRequest ? L('completeRequest') : L('completeNormal'), isRequest ? 'fs' : 'fc');
   document.getElementById('h-done').textContent=G.completedCount;
   setTimeout(nextCustomer, 700);
 }
@@ -1211,7 +1304,7 @@ function nextCustomer(){
   const callEl = document.getElementById('customer-call');
   callEl.classList.remove('show');
   void callEl.offsetWidth;
-  callEl.textContent = '次のお客様〜！';
+  callEl.textContent = L('customerCall');
   callEl.classList.add('show');
 }
 
@@ -1223,7 +1316,7 @@ function resetFace(){
   document.getElementById('pupil-left').setAttribute('fill','#120804');
   document.getElementById('pupil-right').setAttribute('fill','#120804');
   angerEmote.textContent='😤';
-  progFill.style.width='0%'; progSteps.textContent='0 / 4 回';
+  progFill.style.width='0%'; progSteps.textContent = L('progFmt', 0, 4);
   svgEl.classList.remove('var-tilt-left','var-tilt-right','var-tall','var-sway');
   ngZonesEl.classList.remove('var-tilt-left','var-tilt-right','var-tall');
 }
@@ -1308,7 +1401,7 @@ function addToQueue(){
   const variant = pickVariant(G.elapsedSec, type);
   queueTypes.push({ type, variant });
   G.queueCount++; renderQueue();
-  if(G.queueCount>=10) gameOver('待機列が10人に達した！');
+  if(G.queueCount>=10) gameOver(L('gameOverQueue'));
 }
 
 function showMsg(text, cls){
@@ -1330,14 +1423,14 @@ function gameOver(reason){
   ngZonesEl.innerHTML='';
   document.getElementById('ov-reason').textContent='⚠️ '+reason;
   document.getElementById('ov-score-val').textContent=G.hairHeight;
-  document.getElementById('ov-sub').textContent=`坊主: ${G.completedCount}人 ／ 怒られ: ${G.angerCount}回`;
+  document.getElementById('ov-sub').textContent = L('ovSub', G.completedCount, G.angerCount);
   const rank = getRank(G.hairHeight);
   const rankEl = document.getElementById('ov-rank');
   rankEl.style.background = rank.bg;
   rankEl.style.borderColor = rank.border;
   document.getElementById('ov-rank-icon').textContent = rank.icon;
   document.getElementById('ov-rank-label').style.color = rank.color;
-  document.getElementById('ov-rank-name').textContent = rank.name;
+  document.getElementById('ov-rank-name').textContent = currentLang==='ja' ? rank.name : rank.nameEn;
   document.getElementById('ov-rank-name').style.color = rank.color;
   document.getElementById('ov-rank-name').style.textShadow = `0 0 14px ${rank.color}`;
   // アニメーションリセット
@@ -1381,6 +1474,7 @@ function tick(now){
 function startGame(){
   G=makeState(); G.running=true; segments=[]; queueTypes=[];
   overlayEl.classList.remove('show');
+  applyLang();
   updateTilt();
   queueList.innerHTML='';
   resetFace();
@@ -1429,12 +1523,12 @@ function tutNext(){
   }
   document.querySelectorAll('.tut-dot').forEach((d,i)=>d.classList.toggle('active',i===tutPage));
   const btn = document.getElementById('tut-btn');
-  btn.textContent = tutPage === TUT_TOTAL-1 ? 'ゲームスタート！' : '次へ →';
+  btn.textContent = tutPage === TUT_TOTAL-1 ? L('tutStart') : L('tutNext');
 }
 
 function shareResult(){
   const rank = getRank(G.hairHeight);
-  const text = `✂️ BOUZU CLIMBER\n${rank.icon} ${rank.name} 達成！\nヘアタワー ${G.hairHeight}cm / 坊主 ${G.completedCount}人\n#BOUZUCLIMBER`;
+  const text = L('shareText', rank, G.hairHeight, G.completedCount);
   const url  = 'https://ryotakahashi.github.io/bouzu-climber/';
   window.open(
     `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
@@ -1448,10 +1542,69 @@ function showTutorial(){
     document.getElementById(`tut-slide-${i}`).classList.toggle('active', i===0);
   }
   document.querySelectorAll('.tut-dot').forEach((d,i)=>d.classList.toggle('active',i===0));
-  document.getElementById('tut-btn').textContent = '次へ →';
+  document.getElementById('tut-btn').textContent = L('tutNext');
   document.getElementById('tutorial').classList.add('show');
   G.running = false;
 }
+
+function applyLang(){
+  const l = LANG[currentLang];
+  const sub = document.getElementById('subtitle');
+  if(sub) sub.textContent = l.subtitle;
+  const hudQ = document.getElementById('hud-queue-label');
+  if(hudQ) hudQ.textContent = l.hudQueue;
+  const hudD = document.getElementById('hud-done-label');
+  if(hudD) hudD.textContent = l.hudDone;
+  const queueLbl = document.getElementById('queue-label');
+  if(queueLbl) queueLbl.textContent = l.queueLabel;
+  const scoreLbl = document.getElementById('score-label');
+  if(scoreLbl) scoreLbl.textContent = l.scoreLbl;
+  const progLbl = document.getElementById('prog-label');
+  if(progLbl) progLbl.textContent = l.progLabel;
+  const timerLbl = document.getElementById('timer-label');
+  if(timerLbl) timerLbl.textContent = l.timerLabel;
+  const tiltLbl = document.getElementById('tilt-bar-label');
+  if(tiltLbl) tiltLbl.textContent = l.tiltLabel;
+  const bCutsLbl = document.getElementById('b-cuts-label');
+  if(bCutsLbl) bCutsLbl.textContent = l.bCuts;
+  const bAngerLbl = document.getElementById('b-anger-label');
+  if(bAngerLbl) bAngerLbl.textContent = l.bAnger;
+  const bBestLbl = document.getElementById('b-best-label');
+  if(bBestLbl) bBestLbl.textContent = l.bBest;
+  const ovRankLbl = document.getElementById('ov-rank-label');
+  if(ovRankLbl) ovRankLbl.textContent = l.ovRankLabel;
+  const restartBtn = document.getElementById('restart-btn');
+  if(restartBtn) restartBtn.textContent = l.restartBtn;
+  const shareBtnText = document.getElementById('share-btn-text');
+  if(shareBtnText) shareBtnText.textContent = l.shareBtn;
+  const langBtn = document.getElementById('lang-btn');
+  if(langBtn) langBtn.textContent = currentLang==='ja' ? 'EN' : 'JA';
+  const tutHeading = document.getElementById('tut-heading');
+  if(tutHeading) tutHeading.textContent = l.tutHeading;
+  const tutBtn = document.getElementById('tut-btn');
+  if(tutBtn) tutBtn.textContent = tutPage===TUT_TOTAL-1 ? l.tutStart : l.tutNext;
+  const swipeHintEl = document.getElementById('swipe-hint');
+  if(swipeHintEl) swipeHintEl.textContent = l.swipeHint;
+  l.tuts.forEach((t,i)=>{
+    const s = document.getElementById(`tut-slide-${i}`);
+    if(!s) return;
+    const iconEl = s.querySelector('.tut-icon');
+    if(iconEl) iconEl.textContent = t.icon;
+    const titleEl = s.querySelector('.tut-title');
+    if(titleEl) titleEl.textContent = t.title;
+    const bodyEl = s.querySelector('.tut-body');
+    if(bodyEl) bodyEl.innerHTML = t.body;
+  });
+}
+
+function toggleLang(){
+  currentLang = currentLang==='ja' ? 'en' : 'ja';
+  localStorage.setItem('bcLang', currentLang);
+  applyLang();
+}
+
+// 初期言語適用
+applyLang();
 </script>
 </body>
 </html>
